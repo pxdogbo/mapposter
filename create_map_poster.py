@@ -796,16 +796,25 @@ def create_poster(
             family="monospace", weight="bold", size=adjusted_font_size
         )
 
-    # --- BOTTOM TEXT ---
+    # --- BOTTOM TEXT --- (4 rows with equal vertical spacing)
+    y_bottom_block = 0.07
+    y_top_block = 0.14
+    n_rows = 4
+    row_gap = (y_top_block - y_bottom_block) / (n_rows - 1)
+    y_city = y_top_block
+    y_line = y_top_block - row_gap
+    y_country = y_top_block - 2 * row_gap
+    y_coords = y_bottom_block
+
     if use_pixel_spacing and isinstance(letter_spacing, (int, float)):
         _draw_city_name_letter_spaced(
-            fig, ax, 0.14, city_display_str,
+            fig, ax, y_city, city_display_str,
             font_main_adjusted, THEME["text"], int(letter_spacing), zorder=11,
         )
     else:
         ax.text(
             0.5,
-            0.14,
+            y_city,
             spaced_city,
             transform=ax.transAxes,
             color=THEME["text"],
@@ -814,9 +823,18 @@ def create_poster(
             zorder=11,
         )
 
+    ax.plot(
+        [0.4, 0.6],
+        [y_line, y_line],
+        transform=ax.transAxes,
+        color=THEME["text"],
+        linewidth=1 * scale_factor,
+        zorder=11,
+    )
+
     ax.text(
         0.5,
-        0.10,
+        y_country,
         display_country.upper(),
         transform=ax.transAxes,
         color=THEME["text"],
@@ -836,22 +854,13 @@ def create_poster(
 
     ax.text(
         0.5,
-        0.07,
+        y_coords,
         coords,
         transform=ax.transAxes,
         color=THEME["text"],
         alpha=0.7,
         ha="center",
         fontproperties=font_coords,
-        zorder=11,
-    )
-
-    ax.plot(
-        [0.4, 0.6],
-        [0.125, 0.125],
-        transform=ax.transAxes,
-        color=THEME["text"],
-        linewidth=1 * scale_factor,
         zorder=11,
     )
 

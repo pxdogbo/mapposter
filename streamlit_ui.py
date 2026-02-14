@@ -489,10 +489,10 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                     height=LIVE_PRESET_H,
                     fonts=load_fonts("Telegraf") or create_map_poster.FONTS,
                     pad_inches=0,
-                    letter_spacing=40,
+                    letter_spacing=20,
                 )
             if add_border:
-                create_map_poster.add_border_to_image(tmp_path, theme["text"], border_px=80)
+                create_map_poster.add_border_to_image(tmp_path, theme["text"], border_px=40)
             with open(tmp_path, "rb") as f:
                 st.session_state.live_preview_image = f.read()
             os.unlink(tmp_path)
@@ -521,10 +521,10 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                     height=preview_h,
                     fonts=load_fonts("Telegraf") or create_map_poster.FONTS,
                     pad_inches=0,
-                    letter_spacing=40,
+                    letter_spacing=20,
                 )
             if add_border:
-                create_map_poster.add_border_to_image(tmp_path, theme["text"], border_px=80)
+                create_map_poster.add_border_to_image(tmp_path, theme["text"], border_px=40)
             with open(tmp_path, "rb") as f:
                 st.session_state.generated_image = f.read()
             st.session_state.generated_caption = f"Preview · {city}, {country}"
@@ -550,10 +550,10 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                     height=chosen_h,
                     fonts=load_fonts("Telegraf") or create_map_poster.FONTS,
                     pad_inches=0,
-                    letter_spacing=40,
+                    letter_spacing=20,
                 )
             if add_border:
-                create_map_poster.add_border_to_image(output_file, theme["text"], border_px=80)
+                create_map_poster.add_border_to_image(output_file, theme["text"], border_px=40)
             with open(output_file, "rb") as f:
                 st.session_state.generated_image = f.read()
             st.session_state.generated_caption = f"Saved: {output_file}"
