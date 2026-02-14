@@ -271,6 +271,8 @@ if "generated_image" not in st.session_state:
     st.session_state.generated_image = None
 if "generated_caption" not in st.session_state:
     st.session_state.generated_caption = None
+if "generated_filename" not in st.session_state:
+    st.session_state.generated_filename = "map_poster.png"
 if "live_preview_image" not in st.session_state:
     st.session_state.live_preview_image = None
 if "last_live_preview_theme" not in st.session_state:
@@ -543,6 +545,8 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
             with open(tmp_path, "rb") as f:
                 st.session_state.generated_image = f.read()
             st.session_state.generated_caption = f"Preview · {city}, {country}"
+            city_slug = city.lower().replace(" ", "_")
+            st.session_state.generated_filename = f"preview_{city_slug}_{country.lower().replace(' ', '_')}.png"
             os.unlink(tmp_path)
         except Exception as e:
             st.error(str(e))
@@ -568,10 +572,14 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                     letter_spacing=20,
                 )
             if add_border:
-                create_map_poster.add_border_to_image(output_file, theme["text"], border_px=20)
+                full_border_px = int(20 * (chosen_h / 6.0))  # scale to match 6in preview
+                create_map_poster.add_border_to_image(
+                    output_file, theme["text"], border_px=full_border_px
+                )
             with open(output_file, "rb") as f:
                 st.session_state.generated_image = f.read()
             st.session_state.generated_caption = f"Saved: {output_file}"
+            st.session_state.generated_filename = os.path.basename(output_file)
         except Exception as e:
             st.error(str(e))
 
@@ -625,4 +633,11 @@ with col_right:
             st.session_state.generated_image,
             caption=st.session_state.generated_caption,
             use_container_width=True,
+        )
+        st.download_button(
+            "Download PNG",
+            data=st.session_state.generated_image,
+            file_name=st.session_state.generated_filename,
+            mime="image/png",
+            key="download_png",
         )
