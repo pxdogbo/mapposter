@@ -27,6 +27,9 @@ import streamlit as st
 import create_map_poster
 from font_management import load_fonts
 
+# Telegraf: must have Telegraf-Regular.otf and Telegraf-UltraBold.otf in fonts/Telegraf/
+TELEGRAF_FONTS = load_fonts("Telegraf")
+
 # OKLCH → hex (for pasting from https://oklch.com)
 try:
     import colour
@@ -263,6 +266,11 @@ def save_theme_to_file(theme: dict, filename: str) -> str:
 
 
 st.set_page_config(page_title="Map Poster Theme Editor", layout="wide")
+if not TELEGRAF_FONTS:
+    st.warning(
+        "**Telegraf font not found.** Add `Telegraf-Regular.otf` and `Telegraf-UltraBold.otf` to `fonts/Telegraf/` "
+        "(see README there). Using fallback font for now."
+    )
 if "generated_image" not in st.session_state:
     st.session_state.generated_image = None
 if "generated_caption" not in st.session_state:
@@ -487,12 +495,12 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                     "png",
                     width=LIVE_PRESET_W,
                     height=LIVE_PRESET_H,
-                    fonts=load_fonts("Telegraf") or create_map_poster.FONTS,
+                    fonts=TELEGRAF_FONTS or create_map_poster.FONTS,
                     pad_inches=0,
                     letter_spacing=20,
                 )
             if add_border:
-                create_map_poster.add_border_to_image(tmp_path, theme["text"], border_px=40)
+                create_map_poster.add_border_to_image(tmp_path, theme["text"], border_px=20)
             with open(tmp_path, "rb") as f:
                 st.session_state.live_preview_image = f.read()
             os.unlink(tmp_path)
@@ -519,12 +527,12 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                     "png",
                     width=preview_w,
                     height=preview_h,
-                    fonts=load_fonts("Telegraf") or create_map_poster.FONTS,
+                    fonts=TELEGRAF_FONTS or create_map_poster.FONTS,
                     pad_inches=0,
                     letter_spacing=20,
                 )
             if add_border:
-                create_map_poster.add_border_to_image(tmp_path, theme["text"], border_px=40)
+                create_map_poster.add_border_to_image(tmp_path, theme["text"], border_px=20)
             with open(tmp_path, "rb") as f:
                 st.session_state.generated_image = f.read()
             st.session_state.generated_caption = f"Preview · {city}, {country}"
@@ -548,12 +556,12 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                     "png",
                     width=chosen_w,
                     height=chosen_h,
-                    fonts=load_fonts("Telegraf") or create_map_poster.FONTS,
+                    fonts=TELEGRAF_FONTS or create_map_poster.FONTS,
                     pad_inches=0,
                     letter_spacing=20,
                 )
             if add_border:
-                create_map_poster.add_border_to_image(output_file, theme["text"], border_px=40)
+                create_map_poster.add_border_to_image(output_file, theme["text"], border_px=20)
             with open(output_file, "rb") as f:
                 st.session_state.generated_image = f.read()
             st.session_state.generated_caption = f"Saved: {output_file}"

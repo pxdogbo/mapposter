@@ -796,7 +796,7 @@ def create_poster(
             family="monospace", weight="bold", size=adjusted_font_size
         )
 
-    # --- BOTTOM TEXT --- (4 rows with equal vertical spacing)
+    # --- BOTTOM TEXT --- (4 rows with equal vertical spacing; va='center' for even gaps)
     y_bottom_block = 0.07
     y_top_block = 0.14
     n_rows = 4
@@ -819,6 +819,7 @@ def create_poster(
             transform=ax.transAxes,
             color=THEME["text"],
             ha="center",
+            va="center",
             fontproperties=font_main_adjusted,
             zorder=11,
         )
@@ -839,6 +840,7 @@ def create_poster(
         transform=ax.transAxes,
         color=THEME["text"],
         ha="center",
+        va="center",
         fontproperties=font_sub,
         zorder=11,
     )
@@ -860,6 +862,7 @@ def create_poster(
         color=THEME["text"],
         alpha=0.7,
         ha="center",
+        va="center",
         fontproperties=font_coords,
         zorder=11,
     )
