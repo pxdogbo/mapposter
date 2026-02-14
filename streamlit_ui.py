@@ -331,7 +331,7 @@ with col_left:
     st.subheader("Theme")
     available = ["From scratch"] + create_map_poster.get_available_themes()
 
-    # Theme cards in 3-column grid — click the card to select that theme
+    # Theme cards in 3-column grid — click the card to select; delete on saved themes
     theme_cols = st.columns(3)
     for i, theme_id in enumerate(available):
         with theme_cols[i % 3]:
@@ -345,9 +345,18 @@ with col_left:
                 f'</div>',
                 unsafe_allow_html=True,
             )
-            if st.button(display_name, key=f"theme_btn_{theme_id}", type="primary" if is_selected else "secondary", use_container_width=True):
-                st.session_state["theme_select"] = theme_id
-                st.rerun()
+            btn_col1, btn_col2 = st.columns([3, 1])
+            with btn_col1:
+                if st.button(display_name, key=f"theme_btn_{theme_id}", type="primary" if is_selected else "secondary", use_container_width=True):
+                    st.session_state["theme_select"] = theme_id
+                    st.rerun()
+            if theme_id != "From scratch":
+                with btn_col2:
+                    if st.button("🗑", key=f"del_{theme_id}", help=f"Delete {display_name}", use_container_width=True):
+                        if delete_theme_from_file(theme_id):
+                            if st.session_state.get("theme_select") == theme_id:
+                                st.session_state["theme_select"] = "From scratch"
+                            st.rerun()
 
     selected_theme = st.session_state.get("theme_select", available[0])
     if selected_theme not in available:
@@ -580,8 +589,23 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
             st.error(str(e))
 
     st.divider()
-    theme_name = st.text_input("Theme name for save", value="my_theme", key="save_name")
-    if st.button("Save theme"):
+    st.subheader("Save palette")
+    if selected_theme != "From scratch":
+        if st.button("Update current theme", type="primary", key="update_theme_btn"):
+            full_theme = build_full_theme(
+                st.session_state.theme_colors,
+                name=selected_theme.replace("_", " ").title(),
+                description=f"Saved from Streamlit UI - {selected_theme}",
+            )
+            try:
+                path = save_theme_to_file(full_theme, selected_theme)
+                st.success(f"Updated **{selected_theme.replace('_', ' ').title()}**")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Update failed: {e}")
+        st.caption("Or save as a new palette below.")
+    theme_name = st.text_input("Save as new palette", value="my_theme", key="save_name")
+    if st.button("Save as new"):
         full_theme = build_full_theme(
             st.session_state.theme_colors,
             name=theme_name.replace("_", " ").title(),
@@ -589,29 +613,10 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
         )
         try:
             path = save_theme_to_file(full_theme, theme_name)
-            st.success(f"Theme **{theme_name}** saved to `{path}` (current palette with {len(THEME_KEYS)} colors)")
+            st.success(f"Theme **{theme_name}** saved to `{path}`")
+            st.rerun()
         except Exception as e:
             st.error(f"Save failed: {e}")
-
-    with st.expander("Delete palette"):
-        deletable = create_map_poster.get_available_themes()
-        if deletable:
-            delete_choice = st.selectbox(
-                "Palette to delete",
-                options=deletable,
-                format_func=lambda x: x.replace("_", " ").title(),
-                key="delete_theme_select",
-            )
-            if st.button("Delete palette", type="secondary", key="delete_theme_btn"):
-                if delete_theme_from_file(delete_choice):
-                    if st.session_state.get("theme_select") == delete_choice:
-                        st.session_state["theme_select"] = "From scratch"
-                    st.success(f"Deleted **{delete_choice.replace('_', ' ').title()}**")
-                    st.rerun()
-                else:
-                    st.error("Could not delete palette.")
-        else:
-            st.caption("No saved palettes to delete.")
 
 with col_right:
     st.subheader("Preview")
