@@ -177,7 +177,7 @@ def get_available_themes():
 
     themes = []
     for file in sorted(os.listdir(THEMES_DIR)):
-        if file.endswith(".json"):
+        if file.endswith(".json") and file != "hidden_themes.json":
             theme_name = file[:-5]  # Remove .json extension
             themes.append(theme_name)
     return themes

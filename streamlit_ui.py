@@ -140,7 +140,8 @@ def parse_oklch_palette_block(block: str) -> dict[str, str] | None:
     return result if result else None
 
 
-THEMES_DIR = "themes"
+THEMES_DIR = Path(__file__).resolve().parent / "themes"
+HIDDEN_THEMES_FILE = THEMES_DIR / "hidden_themes.json"
 THEME_KEYS = [
     "bg",
     "text",
@@ -243,22 +244,46 @@ CITIES = [
 
 def save_theme_to_file(theme: dict, filename: str) -> str:
     """Save theme to themes/ directory. Returns path or raises."""
-    Path(THEMES_DIR).mkdir(exist_ok=True)
-    path = os.path.join(THEMES_DIR, f"{filename}.json")
+    THEMES_DIR.mkdir(exist_ok=True)
+    path = THEMES_DIR / f"{filename}.json"
     with open(path, "w", encoding="utf-8") as f:
         json.dump(theme, f, indent=2)
-    return path
+    return str(path)
+
+
+def _load_hidden_themes() -> list[str]:
+    """Load list of theme IDs to hide (persists across deploys when committed)."""
+    if not HIDDEN_THEMES_FILE.exists():
+        return []
+    try:
+        with open(HIDDEN_THEMES_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return []
+
+
+def _save_hidden_themes(hidden: list[str]) -> None:
+    """Save hidden themes list to themes/hidden_themes.json."""
+    THEMES_DIR.mkdir(exist_ok=True)
+    with open(HIDDEN_THEMES_FILE, "w", encoding="utf-8") as f:
+        json.dump(hidden, f, indent=2)
 
 
 def delete_theme_from_file(theme_id: str) -> bool:
-    """Delete a theme JSON file from themes/ directory. Returns True if deleted."""
+    """Delete theme: add to hidden list (persists when pushed) and remove file. Returns True if deleted."""
     if not theme_id or theme_id == "From scratch":
         return False
-    path = Path(THEMES_DIR) / f"{theme_id}.json"
+    # Add to hidden list first (committed file = deletions persist on Streamlit Cloud / redeploys)
+    hidden = _load_hidden_themes()
+    if theme_id not in hidden:
+        hidden.append(theme_id)
+        _save_hidden_themes(hidden)
+    # Remove the theme file from disk
+    path = THEMES_DIR / f"{theme_id}.json"
     if path.exists():
         path.unlink()
         return True
-    return False
+    return True  # Consider it deleted if already in hidden list
 
 
 st.set_page_config(page_title="Map Poster Theme Editor", layout="wide")
@@ -318,7 +343,11 @@ with col_left:
 
         # --- Theme selection (grid with palette previews) ---
         st.subheader("Theme")
-        available = ["From scratch"] + create_map_poster.get_available_themes()
+        hidden = _load_hidden_themes()
+        available = ["From scratch"] + [
+            t for t in create_map_poster.get_available_themes()
+            if t not in hidden
+        ]
 
         # Theme cards in 3-column grid — click the card to select; delete on saved themes
         theme_cols = st.columns(3)
