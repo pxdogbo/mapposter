@@ -553,8 +553,6 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
             output_file = create_map_poster.generate_output_filename(
                 city, "custom", "png", subdir="streamlit"
             )
-            # Scale letter spacing so it matches preview proportion (preview is 0.5× size, uses 20px)
-            full_letter_spacing = int(20 * (chosen_h / (chosen_h * 0.5)))
             with st.spinner("Generating..."):
                 create_map_poster.create_poster(
                     city,
@@ -567,7 +565,7 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                     height=chosen_h,
                     fonts=TELEGRAF_FONTS or create_map_poster.FONTS,
                     pad_inches=0,
-                    letter_spacing=full_letter_spacing,
+                    letter_spacing=20,
                 )
             if add_border:
                 create_map_poster.add_border_to_image(output_file, theme["text"], border_px=20)

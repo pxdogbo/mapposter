@@ -795,11 +795,13 @@ def create_poster(
             family="monospace", weight="bold", size=adjusted_font_size
         )
 
-    # --- BOTTOM TEXT --- (4 rows; 12px vertical spacing between each)
+    # --- BOTTOM TEXT --- (4 rows; vertical spacing proportional to height so preview and full poster match)
     dpi = 300
     fig_height_px = height * dpi
     px_to_axes = 1.0 / fig_height_px
-    row_gap = 50 * px_to_axes  # 50px between city, line, country, coords
+    # 50px at 8in height as reference; scale so same visual gap at any size
+    row_gap_px = 50 * (height / 8.0)
+    row_gap = row_gap_px * px_to_axes  # between city, line, country, coords
     y_top_block = 0.14
     y_city = y_top_block
     y_line = y_top_block - row_gap
