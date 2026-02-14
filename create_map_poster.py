@@ -795,17 +795,16 @@ def create_poster(
             family="monospace", weight="bold", size=adjusted_font_size
         )
 
-    # --- BOTTOM TEXT --- (4 rows; 6px below city, 4px below line/country)
+    # --- BOTTOM TEXT --- (4 rows; 12px vertical spacing between each)
     dpi = 300
     fig_height_px = height * dpi
     px_to_axes = 1.0 / fig_height_px
-    gap_city = 6 * px_to_axes   # 6px below city
-    gap_other = 4 * px_to_axes  # 4px below line and country
+    row_gap = 12 * px_to_axes  # 12px between city, line, country, coords
     y_top_block = 0.14
     y_city = y_top_block
-    y_line = y_top_block - gap_city
-    y_country = y_line - gap_other
-    y_coords = y_country - gap_other
+    y_line = y_top_block - row_gap
+    y_country = y_line - row_gap
+    y_coords = y_country - row_gap
 
     if use_pixel_spacing and isinstance(letter_spacing, (int, float)):
         _draw_city_name_letter_spaced(
