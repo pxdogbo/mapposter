@@ -803,7 +803,7 @@ def create_poster(
     row_gap_px = 50 * (height / 6.0)
     row_gap = row_gap_px * px_to_axes  # between city, line, country, coords
     y_top_block = 0.14
-    y_city = y_top_block - 0.02  # city name slightly lower than block; country/coords stay put
+    y_city = y_top_block - 0.01  # city name slightly lower than block; country/coords stay put
     y_line = y_top_block - row_gap
     y_country = y_line - row_gap
     y_coords = y_country - row_gap
