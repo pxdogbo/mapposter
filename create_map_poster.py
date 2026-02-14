@@ -799,7 +799,7 @@ def create_poster(
     # --- BOTTOM TEXT --- (4 rows; uniform gap scaled from border for consistent spacing)
     # Border is 20px; use proportional gap (4x) so spacing matches border rhythm
     dpi = 300
-    gap_px = 4 * 20  # 4x border for readable spacing
+    gap_px = 2 * 20  # 2x border (half of previous spacing)
     fig_height_px = height * dpi
     row_gap = gap_px / fig_height_px
     n_rows = 4
