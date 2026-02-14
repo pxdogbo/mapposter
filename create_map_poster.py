@@ -826,15 +826,6 @@ def create_poster(
             zorder=11,
         )
 
-    ax.plot(
-        [0.4, 0.6],
-        [y_line, y_line],
-        transform=ax.transAxes,
-        color=THEME["text"],
-        linewidth=0.5 * scale_factor,
-        zorder=11,
-    )
-
     ax.text(
         0.5,
         y_country,
