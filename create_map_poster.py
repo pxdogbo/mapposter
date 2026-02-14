@@ -54,7 +54,7 @@ POSTERS_DIR = "posters"
 
 FILE_ENCODING = "utf-8"
 
-FONTS = load_fonts()
+FONTS = load_fonts("Telegraf") or load_fonts()
 
 
 def _cache_path(key: str) -> str:
