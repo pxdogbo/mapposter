@@ -265,6 +265,17 @@ def save_theme_to_file(theme: dict, filename: str) -> str:
     return path
 
 
+def delete_theme_from_file(theme_id: str) -> bool:
+    """Delete a theme JSON file from themes/ directory. Returns True if deleted."""
+    if not theme_id or theme_id == "From scratch":
+        return False
+    path = Path(THEMES_DIR) / f"{theme_id}.json"
+    if path.exists():
+        path.unlink()
+        return True
+    return False
+
+
 st.set_page_config(page_title="Map Poster Theme Editor", layout="wide")
 if not TELEGRAF_FONTS:
     st.warning(
@@ -581,6 +592,26 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
             st.success(f"Theme **{theme_name}** saved to `{path}` (current palette with {len(THEME_KEYS)} colors)")
         except Exception as e:
             st.error(f"Save failed: {e}")
+
+    with st.expander("Delete palette"):
+        deletable = create_map_poster.get_available_themes()
+        if deletable:
+            delete_choice = st.selectbox(
+                "Palette to delete",
+                options=deletable,
+                format_func=lambda x: x.replace("_", " ").title(),
+                key="delete_theme_select",
+            )
+            if st.button("Delete palette", type="secondary", key="delete_theme_btn"):
+                if delete_theme_from_file(delete_choice):
+                    if st.session_state.get("theme_select") == delete_choice:
+                        st.session_state["theme_select"] = "From scratch"
+                    st.success(f"Deleted **{delete_choice.replace('_', ' ').title()}**")
+                    st.rerun()
+                else:
+                    st.error("Could not delete palette.")
+        else:
+            st.caption("No saved palettes to delete.")
 
 with col_right:
     st.subheader("Preview")
