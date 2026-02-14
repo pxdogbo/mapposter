@@ -278,109 +278,111 @@ if "live_preview_image" not in st.session_state:
 if "last_live_preview_theme" not in st.session_state:
     st.session_state.last_live_preview_theme = None
 
-# Two-column layout: controls left, preview right
+# Two-column layout: controls left (scrollable), preview right (fixed)
 col_left, col_right = st.columns([1, 1.2], gap="large")
 
 with col_left:
-    st.title("Map Poster")
-    st.caption("Theme Editor")
+    # Scrollable left so user can reach all controls while keeping preview visible
+    with st.container(height=880):  # Scrollable so preview on right stays visible
+        st.title("Map Poster")
+        st.caption("Theme Editor")
 
-    # --- Location & map params ---
-    st.subheader("Location & map")
-    city_labels = [f"{c}, {co}" for c, co in CITIES]
-    city_idx = st.selectbox(
-        "City",
-        range(len(CITIES)),
-        format_func=lambda i: city_labels[i],
-        key="city_select",
-    )
-    city, country = CITIES[city_idx]
-    distance = st.number_input(
-        "Distance (meters)",
-        min_value=2000,
-        max_value=50000,
-        value=10000,
-        step=1000,
-        key="distance",
-    )
+        # --- Location & map params ---
+        st.subheader("Location & map")
+        city_labels = [f"{c}, {co}" for c, co in CITIES]
+        city_idx = st.selectbox(
+            "City",
+            range(len(CITIES)),
+            format_func=lambda i: city_labels[i],
+            key="city_select",
+        )
+        city, country = CITIES[city_idx]
+        distance = st.number_input(
+            "Distance (meters)",
+            min_value=2000,
+            max_value=50000,
+            value=10000,
+            step=1000,
+            key="distance",
+        )
 
-    # --- Aspect ratio ---
-    st.subheader("Aspect ratio")
-    ratio_labels = [r[0] for r in ASPECT_RATIOS]
-    ratio_choice = st.selectbox(
-        "Output size",
-        options=ratio_labels,
-        key="aspect_ratio",
-    )
-    chosen_w, chosen_h = next((r[1], r[2]) for r in ASPECT_RATIOS if r[0] == ratio_choice)
+        # --- Aspect ratio ---
+        st.subheader("Aspect ratio")
+        ratio_labels = [r[0] for r in ASPECT_RATIOS]
+        ratio_choice = st.selectbox(
+            "Output size",
+            options=ratio_labels,
+            key="aspect_ratio",
+        )
+        chosen_w, chosen_h = next((r[1], r[2]) for r in ASPECT_RATIOS if r[0] == ratio_choice)
 
-    # --- Theme selection (grid with palette previews) ---
-    st.subheader("Theme")
-    available = ["From scratch"] + create_map_poster.get_available_themes()
+        # --- Theme selection (grid with palette previews) ---
+        st.subheader("Theme")
+        available = ["From scratch"] + create_map_poster.get_available_themes()
 
-    # Theme cards in 3-column grid — click the card to select; delete on saved themes
-    theme_cols = st.columns(3)
-    for i, theme_id in enumerate(available):
-        with theme_cols[i % 3]:
-            colors = load_theme_colors(theme_id)
-            display_name = "From scratch" if theme_id == "From scratch" else theme_id.replace("_", " ").title()
-            is_selected = st.session_state.get("theme_select") == theme_id
-            border = "2px solid #1f77b4" if is_selected else "1px solid #ddd"
-            st.markdown(
-                f'<div style="padding:6px;margin-bottom:4px;border-radius:6px;border:{border};background:transparent">'
-                f'{theme_palette_html(colors)}'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-            btn_col1, btn_col2 = st.columns([3, 1])
-            with btn_col1:
-                if st.button(display_name, key=f"theme_btn_{theme_id}", type="primary" if is_selected else "secondary", use_container_width=True):
-                    st.session_state["theme_select"] = theme_id
-                    st.rerun()
-            if theme_id != "From scratch":
-                with btn_col2:
-                    if st.button("🗑", key=f"del_{theme_id}", help=f"Delete {display_name}", use_container_width=True):
-                        if delete_theme_from_file(theme_id):
-                            if st.session_state.get("theme_select") == theme_id:
-                                st.session_state["theme_select"] = "From scratch"
-                            st.rerun()
+        # Theme cards in 3-column grid — click the card to select; delete on saved themes
+        theme_cols = st.columns(3)
+        for i, theme_id in enumerate(available):
+            with theme_cols[i % 3]:
+                colors = load_theme_colors(theme_id)
+                display_name = "From scratch" if theme_id == "From scratch" else theme_id.replace("_", " ").title()
+                is_selected = st.session_state.get("theme_select") == theme_id
+                border = "2px solid #1f77b4" if is_selected else "1px solid #ddd"
+                st.markdown(
+                    f'<div style="padding:6px;margin-bottom:4px;border-radius:6px;border:{border};background:transparent">'
+                    f'{theme_palette_html(colors)}'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+                btn_col1, btn_col2 = st.columns([3, 1])
+                with btn_col1:
+                    if st.button(display_name, key=f"theme_btn_{theme_id}", type="primary" if is_selected else "secondary", use_container_width=True):
+                        st.session_state["theme_select"] = theme_id
+                        st.rerun()
+                if theme_id != "From scratch":
+                    with btn_col2:
+                        if st.button("🗑", key=f"del_{theme_id}", help=f"Delete {display_name}", use_container_width=True):
+                            if delete_theme_from_file(theme_id):
+                                if st.session_state.get("theme_select") == theme_id:
+                                    st.session_state["theme_select"] = "From scratch"
+                                st.rerun()
 
-    selected_theme = st.session_state.get("theme_select", available[0])
-    if selected_theme not in available:
-        selected_theme = available[0]
-        st.session_state["theme_select"] = selected_theme
+        selected_theme = st.session_state.get("theme_select", available[0])
+        if selected_theme not in available:
+            selected_theme = available[0]
+            st.session_state["theme_select"] = selected_theme
 
-    # Initialize session state for colors
-    if "theme_colors" not in st.session_state:
-        st.session_state.theme_colors = load_theme_colors(selected_theme)
+        # Initialize session state for colors
+        if "theme_colors" not in st.session_state:
+            st.session_state.theme_colors = load_theme_colors(selected_theme)
 
-    if st.session_state.get("last_theme") != selected_theme:
-        st.session_state.theme_colors = load_theme_colors(selected_theme)
-        st.session_state.last_theme = selected_theme
-        st.session_state["palette_version"] = st.session_state.get("palette_version", 0) + 1
+        if st.session_state.get("last_theme") != selected_theme:
+            st.session_state.theme_colors = load_theme_colors(selected_theme)
+            st.session_state.last_theme = selected_theme
+            st.session_state["palette_version"] = st.session_state.get("palette_version", 0) + 1
 
-    # --- Color pickers in grid ---
-    st.subheader("Theme colors")
-    labels = {
-        "bg": "Background",
-        "text": "Text",
-        "water": "Water",
-        "parks": "Parks",
-        "gradient_color": "Gradient",
-        "road_motorway": "Motorway",
-        "road_primary": "Primary",
-        "road_secondary": "Secondary",
-        "road_tertiary": "Tertiary",
-        "road_residential": "Residential",
-        "road_default": "Default",
-    }
+        # --- Color pickers in grid ---
+        st.subheader("Theme colors")
+        labels = {
+            "bg": "Background",
+            "text": "Text",
+            "water": "Water",
+            "parks": "Parks",
+            "gradient_color": "Gradient",
+            "road_motorway": "Motorway",
+            "road_primary": "Primary",
+            "road_secondary": "Secondary",
+            "road_tertiary": "Tertiary",
+            "road_residential": "Residential",
+            "road_default": "Default",
+        }
 
-    # Paste OKLCH from https://oklch.com
-    with st.expander("Paste OKLCH (from [oklch.com](https://oklch.com))"):
-        if HAS_OKLCH:
-            with st.expander("Copy this prompt to generate an OKLCH palette (e.g. with an AI)", expanded=False):
-                st.caption("Paste the prompt below into an AI or use it as a brief. Then paste the model’s output into the box further down.")
-                OKLCH_PROMPT_TEMPLATE = """Create an OKLCH palette for a map poster theme. For each of these 11 roles, output one line in this exact format: Label: L, C, H (Lightness 0–1, Chroma, Hue 0–360°). Use this order and these labels:
+        # Paste OKLCH from https://oklch.com
+        with st.expander("Paste OKLCH (from [oklch.com](https://oklch.com))"):
+            if HAS_OKLCH:
+                with st.expander("Copy this prompt to generate an OKLCH palette (e.g. with an AI)", expanded=False):
+                    st.caption("Paste the prompt below into an AI or use it as a brief. Then paste the model’s output into the box further down.")
+                    OKLCH_PROMPT_TEMPLATE = """Create an OKLCH palette for a map poster theme. For each of these 11 roles, output one line in this exact format: Label: L, C, H (Lightness 0–1, Chroma, Hue 0–360°). Use this order and these labels:
 
 Background: L, C, H
 Text: L, C, H
@@ -395,10 +397,10 @@ Road – residential: L, C, H
 Road – default: L, C, H
 
 Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast). I will paste the output into a map theme editor that accepts OKLCH."""
-                st.code(OKLCH_PROMPT_TEMPLATE, language=None)
+                    st.code(OKLCH_PROMPT_TEMPLATE, language=None)
 
-            st.markdown("**Paste all 11 colors at once** — one line per key, no need to select an element.")
-            oklch_placeholder = "\n".join(
+                st.markdown("**Paste all 11 colors at once** — one line per key, no need to select an element.")
+                oklch_placeholder = "\n".join(
                 [
                     "Background: L, C, H",
                     "Text: L, C, H",
@@ -412,206 +414,206 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                     "Road – residential: L, C, H",
                     "Road – default: L, C, H",
                 ]
-            )
-            oklch_palette_raw = st.text_area(
+                )
+                oklch_palette_raw = st.text_area(
                 "Paste your full palette here (one line per color)",
                 placeholder=oklch_placeholder,
                 key="oklch_palette_input",
                 height=140,
                 label_visibility="collapsed",
-            )
-            if st.button("Apply full palette", key="oklch_apply_all", type="primary"):
-                applied = parse_oklch_palette_block(oklch_palette_raw)
-                if applied:
-                    for k, hex_val in applied.items():
-                        st.session_state.theme_colors[k] = hex_val
-                    # Force color pickers to re-initialize with new colors (they'd otherwise keep old state and overwrite)
-                    st.session_state["palette_version"] = st.session_state.get("palette_version", 0) + 1
-                    st.success(f"Applied {len(applied)} colors. No need to select anything — each line sets its own key.")
-                    st.rerun()
-                else:
-                    st.error("Could not parse. Paste lines like: Background: 0.18, 0.05, 282.82")
-
-            with st.expander("Or paste one color and apply to a single key"):
-                oklch_raw = st.text_input(
-                    "Single OKLCH value",
-                    placeholder="e.g. 0.726, 0.129, 253.06",
-                    key="oklch_input",
                 )
-                oklch_apply_key = st.selectbox(
-                    "Apply to",
-                    options=THEME_KEYS,
-                    format_func=lambda k: labels.get(k, k),
-                    key="oklch_apply_key",
-                )
-                if st.button("Apply OKLCH", key="oklch_apply"):
-                    parsed = parse_oklch_input(oklch_raw)
-                    if parsed is not None:
-                        hex_val = oklch_to_hex(*parsed)
-                        st.session_state.theme_colors[oklch_apply_key] = hex_val
-                        st.success(f"Set {oklch_apply_key} to {hex_val}")
+                if st.button("Apply full palette", key="oklch_apply_all", type="primary"):
+                    applied = parse_oklch_palette_block(oklch_palette_raw)
+                    if applied:
+                        for k, hex_val in applied.items():
+                            st.session_state.theme_colors[k] = hex_val
+                        # Force color pickers to re-initialize with new colors (they'd otherwise keep old state and overwrite)
+                        st.session_state["palette_version"] = st.session_state.get("palette_version", 0) + 1
+                        st.success(f"Applied {len(applied)} colors. No need to select anything — each line sets its own key.")
                         st.rerun()
                     else:
-                        st.error("Could not parse OKLCH. Use: L, C, H (e.g. 0.726, 0.129, 253.06)")
-        else:
-            st.caption(
-                "OKLCH needs the **colour** package. It only works if installed for the **same Python that runs Streamlit** "
-                "(otherwise the app can’t import it).  \n\n"
-                "**If you use uv:**  \n"
-                "`uv sync`  \n"
-                "**If you use pip:** use the same interpreter that runs Streamlit, e.g.  \n"
-                "`python3.11 -m pip install colour-science`  \n"
-                "(Replace `python3.11` with `python` or `python3` if that’s what you use to run Streamlit.) Then restart the app."
-            )
+                        st.error("Could not parse. Paste lines like: Background: 0.18, 0.05, 282.82")
 
-    # Include palette_version so pickers re-init after "Apply full palette" (otherwise they overwrite with stale state)
-    picker_key_suffix = st.session_state.get("palette_version", 0)
-    picker_cols = st.columns(4)
-    for i, key in enumerate(THEME_KEYS):
-        with picker_cols[i % 4]:
-            val = st.color_picker(
-                labels.get(key, key),
-                value=st.session_state.theme_colors.get(key, "#000000"),
-                key=f"picker_{selected_theme}_{key}_{picker_key_suffix}",
-            )
-            st.session_state.theme_colors[key] = val
-
-    # --- Actions ---
-    st.subheader("Generate")
-    add_border = st.checkbox(
-        "Add border (uses theme text color)",
-        value=True,
-        key="add_border",
-    )
-    theme = build_full_theme(st.session_state.theme_colors)
-    create_map_poster.THEME.clear()
-    create_map_poster.THEME.update(theme)
-
-    # Live preset map: regenerate when theme colors change (one fixed map, updates in real time)
-    current_theme_key = tuple(sorted(st.session_state.theme_colors.items()))
-    if current_theme_key != st.session_state.get("last_live_preview_theme"):
-        try:
-            coords = create_map_poster.get_coordinates(LIVE_PRESET_CITY, LIVE_PRESET_COUNTRY)
-            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-                tmp_path = tmp.name
-            with st.spinner("Updating live preview..."):
-                create_map_poster.create_poster(
-                    LIVE_PRESET_CITY,
-                    LIVE_PRESET_COUNTRY,
-                    coords,
-                    LIVE_PRESET_DIST,
-                    tmp_path,
-                    "png",
-                    width=LIVE_PRESET_W,
-                    height=LIVE_PRESET_H,
-                    fonts=TELEGRAF_FONTS or create_map_poster.FONTS,
-                    pad_inches=0,
-                    letter_spacing=20,
+                with st.expander("Or paste one color and apply to a single key"):
+                    oklch_raw = st.text_input(
+                        "Single OKLCH value",
+                        placeholder="e.g. 0.726, 0.129, 253.06",
+                        key="oklch_input",
+                    )
+                    oklch_apply_key = st.selectbox(
+                        "Apply to",
+                        options=THEME_KEYS,
+                        format_func=lambda k: labels.get(k, k),
+                        key="oklch_apply_key",
+                    )
+                    if st.button("Apply OKLCH", key="oklch_apply"):
+                        parsed = parse_oklch_input(oklch_raw)
+                        if parsed is not None:
+                            hex_val = oklch_to_hex(*parsed)
+                            st.session_state.theme_colors[oklch_apply_key] = hex_val
+                            st.success(f"Set {oklch_apply_key} to {hex_val}")
+                            st.rerun()
+                        else:
+                            st.error("Could not parse OKLCH. Use: L, C, H (e.g. 0.726, 0.129, 253.06)")
+            else:
+                st.caption(
+                    "OKLCH needs the **colour** package. It only works if installed for the **same Python that runs Streamlit** "
+                    "(otherwise the app can’t import it).  \n\n"
+                    "**If you use uv:**  \n"
+                    "`uv sync`  \n"
+                    "**If you use pip:** use the same interpreter that runs Streamlit, e.g.  \n"
+                    "`python3.11 -m pip install colour-science`  \n"
+                    "(Replace `python3.11` with `python` or `python3` if that’s what you use to run Streamlit.) Then restart the app."
                 )
-            if add_border:
-                create_map_poster.add_border_to_image(tmp_path, theme["text"], border_px=20)
-            with open(tmp_path, "rb") as f:
-                st.session_state.live_preview_image = f.read()
-            os.unlink(tmp_path)
-            st.session_state.last_live_preview_theme = current_theme_key
-        except Exception as e:
-            # Don't block the UI; live preview will retry next run
-            st.session_state.last_live_preview_theme = current_theme_key
 
-    if st.button("Generate preview", type="primary"):
-        preview_dist = int(distance * 0.5)
-        preview_w = chosen_w * 0.5
-        preview_h = chosen_h * 0.5
-        try:
-            coords = create_map_poster.get_coordinates(city, country)
-            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-                tmp_path = tmp.name
-            with st.spinner("Generating..."):
-                create_map_poster.create_poster(
-                    city,
-                    country,
-                    coords,
-                    preview_dist,
-                    tmp_path,
-                    "png",
-                    width=preview_w,
-                    height=preview_h,
-                    fonts=TELEGRAF_FONTS or create_map_poster.FONTS,
-                    pad_inches=0,
-                    letter_spacing=20,
+        # Include palette_version so pickers re-init after "Apply full palette" (otherwise they overwrite with stale state)
+        picker_key_suffix = st.session_state.get("palette_version", 0)
+        picker_cols = st.columns(4)
+        for i, key in enumerate(THEME_KEYS):
+            with picker_cols[i % 4]:
+                val = st.color_picker(
+                    labels.get(key, key),
+                    value=st.session_state.theme_colors.get(key, "#000000"),
+                    key=f"picker_{selected_theme}_{key}_{picker_key_suffix}",
                 )
-            if add_border:
-                create_map_poster.add_border_to_image(tmp_path, theme["text"], border_px=20)
-            with open(tmp_path, "rb") as f:
-                st.session_state.generated_image = f.read()
-            st.session_state.generated_caption = f"Preview · {city}, {country}"
-            city_slug = city.lower().replace(" ", "_")
-            st.session_state.generated_filename = f"preview_{city_slug}_{country.lower().replace(' ', '_')}.png"
-            os.unlink(tmp_path)
-        except Exception as e:
-            st.error(str(e))
+                st.session_state.theme_colors[key] = val
 
-    if st.button("Generate full poster"):
-        try:
-            coords = create_map_poster.get_coordinates(city, country)
-            output_file = create_map_poster.generate_output_filename(
-                city, "custom", "png", subdir="streamlit"
-            )
-            with st.spinner("Generating..."):
-                create_map_poster.create_poster(
-                    city,
-                    country,
-                    coords,
-                    distance,
-                    output_file,
-                    "png",
-                    width=chosen_w,
-                    height=chosen_h,
-                    fonts=TELEGRAF_FONTS or create_map_poster.FONTS,
-                    pad_inches=0,
-                    letter_spacing=20,
-                )
-            if add_border:
-                full_border_px = int(20 * (chosen_h / 6.0))  # scale to match 6in preview
-                create_map_poster.add_border_to_image(
-                    output_file, theme["text"], border_px=full_border_px
-                )
-            with open(output_file, "rb") as f:
-                st.session_state.generated_image = f.read()
-            st.session_state.generated_caption = f"Saved: {output_file}"
-            st.session_state.generated_filename = os.path.basename(output_file)
-        except Exception as e:
-            st.error(str(e))
+        # --- Actions ---
+        st.subheader("Generate")
+        add_border = st.checkbox(
+            "Add border (uses theme text color)",
+            value=True,
+            key="add_border",
+        )
+        theme = build_full_theme(st.session_state.theme_colors)
+        create_map_poster.THEME.clear()
+        create_map_poster.THEME.update(theme)
 
-    st.divider()
-    st.subheader("Save palette")
-    if selected_theme != "From scratch":
-        if st.button("Update current theme", type="primary", key="update_theme_btn"):
+        # Live preset map: regenerate when theme colors change (one fixed map, updates in real time)
+        current_theme_key = tuple(sorted(st.session_state.theme_colors.items()))
+        if current_theme_key != st.session_state.get("last_live_preview_theme"):
+            try:
+                coords = create_map_poster.get_coordinates(LIVE_PRESET_CITY, LIVE_PRESET_COUNTRY)
+                with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                    tmp_path = tmp.name
+                with st.spinner("Updating live preview..."):
+                    create_map_poster.create_poster(
+                        LIVE_PRESET_CITY,
+                        LIVE_PRESET_COUNTRY,
+                        coords,
+                        LIVE_PRESET_DIST,
+                        tmp_path,
+                        "png",
+                        width=LIVE_PRESET_W,
+                        height=LIVE_PRESET_H,
+                        fonts=TELEGRAF_FONTS or create_map_poster.FONTS,
+                        pad_inches=0,
+                        letter_spacing=20,
+                    )
+                if add_border:
+                    create_map_poster.add_border_to_image(tmp_path, theme["text"], border_px=20)
+                with open(tmp_path, "rb") as f:
+                    st.session_state.live_preview_image = f.read()
+                os.unlink(tmp_path)
+                st.session_state.last_live_preview_theme = current_theme_key
+            except Exception as e:
+                # Don't block the UI; live preview will retry next run
+                st.session_state.last_live_preview_theme = current_theme_key
+
+        if st.button("Generate preview", type="primary"):
+            preview_dist = int(distance * 0.5)
+            preview_w = chosen_w * 0.5
+            preview_h = chosen_h * 0.5
+            try:
+                coords = create_map_poster.get_coordinates(city, country)
+                with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                    tmp_path = tmp.name
+                with st.spinner("Generating..."):
+                    create_map_poster.create_poster(
+                        city,
+                        country,
+                        coords,
+                        preview_dist,
+                        tmp_path,
+                        "png",
+                        width=preview_w,
+                        height=preview_h,
+                        fonts=TELEGRAF_FONTS or create_map_poster.FONTS,
+                        pad_inches=0,
+                        letter_spacing=20,
+                    )
+                if add_border:
+                    create_map_poster.add_border_to_image(tmp_path, theme["text"], border_px=20)
+                with open(tmp_path, "rb") as f:
+                    st.session_state.generated_image = f.read()
+                st.session_state.generated_caption = f"Preview · {city}, {country}"
+                city_slug = city.lower().replace(" ", "_")
+                st.session_state.generated_filename = f"preview_{city_slug}_{country.lower().replace(' ', '_')}.png"
+                os.unlink(tmp_path)
+            except Exception as e:
+                st.error(str(e))
+
+        if st.button("Generate full poster"):
+            try:
+                coords = create_map_poster.get_coordinates(city, country)
+                output_file = create_map_poster.generate_output_filename(
+                    city, "custom", "png", subdir="streamlit"
+                )
+                with st.spinner("Generating..."):
+                    create_map_poster.create_poster(
+                        city,
+                        country,
+                        coords,
+                        distance,
+                        output_file,
+                        "png",
+                        width=chosen_w,
+                        height=chosen_h,
+                        fonts=TELEGRAF_FONTS or create_map_poster.FONTS,
+                        pad_inches=0,
+                        letter_spacing=20,
+                    )
+                if add_border:
+                    full_border_px = int(20 * (chosen_h / 6.0))  # scale to match 6in preview
+                    create_map_poster.add_border_to_image(
+                        output_file, theme["text"], border_px=full_border_px
+                    )
+                with open(output_file, "rb") as f:
+                    st.session_state.generated_image = f.read()
+                st.session_state.generated_caption = f"Saved: {output_file}"
+                st.session_state.generated_filename = os.path.basename(output_file)
+            except Exception as e:
+                st.error(str(e))
+
+        st.divider()
+        st.subheader("Save palette")
+        if selected_theme != "From scratch":
+            if st.button("Update current theme", type="primary", key="update_theme_btn"):
+                full_theme = build_full_theme(
+                    st.session_state.theme_colors,
+                    name=selected_theme.replace("_", " ").title(),
+                    description=f"Saved from Streamlit UI - {selected_theme}",
+                )
+                try:
+                    path = save_theme_to_file(full_theme, selected_theme)
+                    st.success(f"Updated **{selected_theme.replace('_', ' ').title()}**")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Update failed: {e}")
+            st.caption("Or save as a new palette below.")
+        theme_name = st.text_input("Save as new palette", value="my_theme", key="save_name")
+        if st.button("Save as new"):
             full_theme = build_full_theme(
                 st.session_state.theme_colors,
-                name=selected_theme.replace("_", " ").title(),
-                description=f"Saved from Streamlit UI - {selected_theme}",
+                name=theme_name.replace("_", " ").title(),
+                description=f"Saved from Streamlit UI - {theme_name}",
             )
             try:
-                path = save_theme_to_file(full_theme, selected_theme)
-                st.success(f"Updated **{selected_theme.replace('_', ' ').title()}**")
+                path = save_theme_to_file(full_theme, theme_name)
+                st.success(f"Theme **{theme_name}** saved to `{path}`")
                 st.rerun()
             except Exception as e:
-                st.error(f"Update failed: {e}")
-        st.caption("Or save as a new palette below.")
-    theme_name = st.text_input("Save as new palette", value="my_theme", key="save_name")
-    if st.button("Save as new"):
-        full_theme = build_full_theme(
-            st.session_state.theme_colors,
-            name=theme_name.replace("_", " ").title(),
-            description=f"Saved from Streamlit UI - {theme_name}",
-        )
-        try:
-            path = save_theme_to_file(full_theme, theme_name)
-            st.success(f"Theme **{theme_name}** saved to `{path}`")
-            st.rerun()
-        except Exception as e:
-            st.error(f"Save failed: {e}")
+                st.error(f"Save failed: {e}")
 
 with col_right:
     st.subheader("Preview")
