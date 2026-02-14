@@ -796,20 +796,17 @@ def create_poster(
             family="monospace", weight="bold", size=adjusted_font_size
         )
 
-    # --- BOTTOM TEXT --- (4 rows; uniform gap scaled from border for consistent spacing)
-    # Border is 20px; use proportional gap (4x) so spacing matches border rhythm
+    # --- BOTTOM TEXT --- (4 rows; 6px below city, 4px below line/country)
     dpi = 300
-    gap_px = 2 * 20  # 2x border (half of previous spacing)
     fig_height_px = height * dpi
-    row_gap = gap_px / fig_height_px
-    n_rows = 4
-    total_span = (n_rows - 1) * row_gap
+    px_to_axes = 1.0 / fig_height_px
+    gap_city = 6 * px_to_axes   # 6px below city
+    gap_other = 4 * px_to_axes  # 4px below line and country
     y_top_block = 0.14
-    y_bottom_block = y_top_block - total_span
     y_city = y_top_block
-    y_line = y_top_block - row_gap
-    y_country = y_top_block - 2 * row_gap
-    y_coords = y_bottom_block
+    y_line = y_top_block - gap_city
+    y_country = y_line - gap_other
+    y_coords = y_country - gap_other
 
     if use_pixel_spacing and isinstance(letter_spacing, (int, float)):
         _draw_city_name_letter_spaced(
