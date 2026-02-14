@@ -224,6 +224,12 @@ ASPECT_RATIOS = [
     ("12:16 (poster)", 12, 16),
 ]
 
+# Fixed preset for live-updating preview (small so it regenerates quickly)
+LIVE_PRESET_CITY = "Amsterdam"
+LIVE_PRESET_COUNTRY = "Netherlands"
+LIVE_PRESET_DIST = 5000
+LIVE_PRESET_W, LIVE_PRESET_H = 5, 6
+
 # City list: (city_name, country) — selecting a city auto-sets the country
 CITIES = [
     ("Amsterdam", "Netherlands"),
@@ -261,6 +267,10 @@ if "generated_image" not in st.session_state:
     st.session_state.generated_image = None
 if "generated_caption" not in st.session_state:
     st.session_state.generated_caption = None
+if "live_preview_image" not in st.session_state:
+    st.session_state.live_preview_image = None
+if "last_live_preview_theme" not in st.session_state:
+    st.session_state.last_live_preview_theme = None
 
 # Two-column layout: controls left, preview right
 col_left, col_right = st.columns([1, 1.2], gap="large")
@@ -460,6 +470,37 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
     create_map_poster.THEME.clear()
     create_map_poster.THEME.update(theme)
 
+    # Live preset map: regenerate when theme colors change (one fixed map, updates in real time)
+    current_theme_key = tuple(sorted(st.session_state.theme_colors.items()))
+    if current_theme_key != st.session_state.get("last_live_preview_theme"):
+        try:
+            coords = create_map_poster.get_coordinates(LIVE_PRESET_CITY, LIVE_PRESET_COUNTRY)
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                tmp_path = tmp.name
+            with st.spinner("Updating live preview..."):
+                create_map_poster.create_poster(
+                    LIVE_PRESET_CITY,
+                    LIVE_PRESET_COUNTRY,
+                    coords,
+                    LIVE_PRESET_DIST,
+                    tmp_path,
+                    "png",
+                    width=LIVE_PRESET_W,
+                    height=LIVE_PRESET_H,
+                    fonts=load_fonts("Telegraf") or create_map_poster.FONTS,
+                    pad_inches=0,
+                    letter_spacing=40,
+                )
+            if add_border:
+                create_map_poster.add_border_to_image(tmp_path, theme["text"], border_px=80)
+            with open(tmp_path, "rb") as f:
+                st.session_state.live_preview_image = f.read()
+            os.unlink(tmp_path)
+            st.session_state.last_live_preview_theme = current_theme_key
+        except Exception as e:
+            # Don't block the UI; live preview will retry next run
+            st.session_state.last_live_preview_theme = current_theme_key
+
     if st.button("Generate preview", type="primary"):
         preview_dist = int(distance * 0.5)
         preview_w = chosen_w * 0.5
@@ -535,11 +576,22 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
 
 with col_right:
     st.subheader("Preview")
+    # Live preset map — updates automatically when you change colors
+    if st.session_state.live_preview_image:
+        st.caption(f"**Live** · {LIVE_PRESET_CITY}, {LIVE_PRESET_COUNTRY} ({LIVE_PRESET_DIST//1000} km) — updates as you pick colors")
+        st.image(
+            st.session_state.live_preview_image,
+            use_container_width=True,
+        )
+    else:
+        st.info("Loading live preview… (preset map will update as you change colors)")
+
+    # Last result from "Generate preview" / "Generate full poster"
     if st.session_state.generated_image:
+        st.divider()
+        st.caption("**Last generated**")
         st.image(
             st.session_state.generated_image,
             caption=st.session_state.generated_caption,
             use_container_width=True,
         )
-    else:
-        st.info("Configure options on the left and click **Generate preview** to see the map.")
