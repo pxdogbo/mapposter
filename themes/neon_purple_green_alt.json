@@ -1,0 +1,15 @@
+{
+  "name": "Neon Purple Green Alt",
+  "description": "Dark like Medellín, brighter neon purple main, mint green secondary",
+  "bg": "#100E2A",
+  "text": "#C4B5FD",
+  "gradient_color": "#100E2A",
+  "water": "#1A1835",
+  "parks": "#151228",
+  "road_motorway": "#C4B5FD",
+  "road_primary": "#A78BFA",
+  "road_secondary": "#34D399",
+  "road_tertiary": "#10B981",
+  "road_residential": "#059669",
+  "road_default": "#10B981"
+}

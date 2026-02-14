@@ -1,0 +1,16 @@
+{
+  "name": "Neon Amber Blue Water",
+  "description": "Neon amber roads, water = darker gradient blue with a subtle glow",
+  "bg": "#0D0C0A",
+  "text": "#FFC857",
+  "gradient_color": "#0D0C0A",
+  "water": "#0E5E8C",
+  "water_dark": "#050D14",
+  "parks": "#151210",
+  "road_motorway": "#FFB347",
+  "road_primary": "#FFA500",
+  "road_secondary": "#FF8C00",
+  "road_tertiary": "#E67E22",
+  "road_residential": "#D35400",
+  "road_default": "#E67E22"
+}

@@ -1,0 +1,15 @@
+{
+  "name": "Neon Green",
+  "description": "Dark with green neon - cool night city vibes",
+  "bg": "#0D0C0A",
+  "text": "#7FFF7F",
+  "gradient_color": "#0D0C0A",
+  "water": "#0A120F",
+  "parks": "#0F1512",
+  "road_motorway": "#00FF7F",
+  "road_primary": "#00E676",
+  "road_secondary": "#00C853",
+  "road_tertiary": "#2E7D32",
+  "road_residential": "#1B5E20",
+  "road_default": "#2E7D32"
+}

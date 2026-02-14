@@ -1,0 +1,15 @@
+{
+  "name": "Dice AI",
+  "description": "Dice AI app palette - dark indigo, purple gradient, lavender accents",
+  "bg": "#100E2A",
+  "text": "#E8E4FD",
+  "gradient_color": "#100E2A",
+  "water": "#2A2960",
+  "parks": "#1A1835",
+  "road_motorway": "#3E3E87",
+  "road_primary": "#5C5CBB",
+  "road_secondary": "#6E6ED2",
+  "road_tertiary": "#8470C9",
+  "road_residential": "#9B8ED9",
+  "road_default": "#8470C9"
+}

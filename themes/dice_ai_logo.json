@@ -1,0 +1,15 @@
+{
+  "name": "Dice AI Logo",
+  "description": "From the logo: lavender glow, deep indigo, neon purple/magenta. Parks = Rio neon green (#00FF7F).",
+  "bg": "#0A0618",
+  "text": "#DDD6FE",
+  "gradient_color": "#0A0618",
+  "water": "#0D1B2A",
+  "parks": "#00FF7F",
+  "road_motorway": "#DDD6FE",
+  "road_primary": "#C4B5FD",
+  "road_secondary": "#A855F7",
+  "road_tertiary": "#6C51B9",
+  "road_residential": "#4C3D99",
+  "road_default": "#2D2960"
+}

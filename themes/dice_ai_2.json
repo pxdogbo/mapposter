@@ -1,0 +1,15 @@
+{
+  "name": "Dice AI 2",
+  "description": "Dice AI UI palette – neon purple main lines, minor roads fade to dark",
+  "bg": "#0F0524",
+  "text": "#C4B5FD",
+  "gradient_color": "#0F0524",
+  "water": "#1D0A44",
+  "parks": "#1A1828",
+  "road_motorway": "#DDD6FE",
+  "road_primary": "#C4B5FD",
+  "road_secondary": "#6C51B9",
+  "road_tertiary": "#4C3D99",
+  "road_residential": "#2D2960",
+  "road_default": "#1D0A44"
+}

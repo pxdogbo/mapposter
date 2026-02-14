@@ -1,0 +1,15 @@
+{
+  "name": "Neon Amber",
+  "description": "Dark with yellow/orange neon - warm night city vibes",
+  "bg": "#0D0C0A",
+  "text": "#FFC857",
+  "gradient_color": "#0D0C0A",
+  "water": "#1A1510",
+  "parks": "#151210",
+  "road_motorway": "#FFB347",
+  "road_primary": "#FFA500",
+  "road_secondary": "#FF8C00",
+  "road_tertiary": "#E67E22",
+  "road_residential": "#D35400",
+  "road_default": "#E67E22"
+}

@@ -1,0 +1,15 @@
+{
+  "name": "Multicolor Cartagena",
+  "description": "Six distinct road levels – caribbean order: cyan, coral, gold, teal, magenta, lime",
+  "bg": "#0F1419",
+  "text": "#E8F4F8",
+  "gradient_color": "#0F1419",
+  "water": "#0A1628",
+  "parks": "#121A1F",
+  "road_motorway": "#00D4FF",
+  "road_primary": "#FF6B6B",
+  "road_secondary": "#FFD93D",
+  "road_tertiary": "#00C9A7",
+  "road_residential": "#C77DFF",
+  "road_default": "#7CFC00"
+}
