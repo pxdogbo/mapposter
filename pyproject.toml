@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
-    {name = "Ankur Gupta", email = "originalankur@github.com"}
+    {name = "Map Poster Contributors"}
 ]
 keywords = ["map", "poster", "osm", "openstreetmap", "art", "visualization"]
 

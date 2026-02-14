@@ -9,6 +9,11 @@ venv/
 # Generated posters (optional: remove to track them)
 posters/
 
+# Secrets (never commit)
+.env
+.env.*
+*.pem
+
 # IDE / OS
 .DS_Store
 .idea/
