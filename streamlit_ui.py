@@ -453,9 +453,13 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                         st.error("Could not parse OKLCH. Use: L, C, H (e.g. 0.726, 0.129, 253.06)")
         else:
             st.caption(
-                "OKLCH needs the **colour** package. Install with the same Python that runs Streamlit, then restart:  \n"
+                "OKLCH needs the **colour** package. It only works if installed for the **same Python that runs Streamlit** "
+                "(otherwise the app can’t import it).  \n\n"
+                "**If you use uv:**  \n"
+                "`uv sync`  \n"
+                "**If you use pip:** use the same interpreter that runs Streamlit, e.g.  \n"
                 "`python3.11 -m pip install colour-science`  \n"
-                "(If your Streamlit is under Python 3.11, use `python3.11`; otherwise use `python` or `python3`.)"
+                "(Replace `python3.11` with `python` or `python3` if that’s what you use to run Streamlit.) Then restart the app."
             )
 
     # Include palette_version so pickers re-init after "Apply full palette" (otherwise they overwrite with stale state)
@@ -549,6 +553,8 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
             output_file = create_map_poster.generate_output_filename(
                 city, "custom", "png", subdir="streamlit"
             )
+            # Scale letter spacing so it matches preview proportion (preview is 0.5× size, uses 20px)
+            full_letter_spacing = int(20 * (chosen_h / (chosen_h * 0.5)))
             with st.spinner("Generating..."):
                 create_map_poster.create_poster(
                     city,
@@ -561,7 +567,7 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                     height=chosen_h,
                     fonts=TELEGRAF_FONTS or create_map_poster.FONTS,
                     pad_inches=0,
-                    letter_spacing=20,
+                    letter_spacing=full_letter_spacing,
                 )
             if add_border:
                 create_map_poster.add_border_to_image(output_file, theme["text"], border_px=20)
