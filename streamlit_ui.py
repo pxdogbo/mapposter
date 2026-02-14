@@ -196,25 +196,10 @@ PALETTE_KEYS = ["bg", "road_primary", "road_secondary", "water", "parks", "text"
 def theme_palette_html(colors: dict) -> str:
     """HTML for a horizontal strip of color swatches that fill the container."""
     squares = "".join(
-        f'<div style="flex:1;min-height:20px;background:{colors.get(k,"#666")};border-radius:3px"></div>'
+        f'<div style="flex:1;min-height:40px;background:{colors.get(k,"#666")};border-radius:4px"></div>'
         for k in PALETTE_KEYS
     )
-    return f'<div style="display:flex;gap:2px;width:100%;min-height:20px">{squares}</div>'
-
-
-def render_color_swatches(colors: dict) -> None:
-    """Display live color swatches for the current palette in a grid."""
-    st.caption("Current palette")
-    grid_cols = st.columns(4)
-    for i, (key, hex_val) in enumerate(colors.items()):
-        with grid_cols[i % 4]:
-            st.markdown(
-                f'<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px">'
-                f'<div style="width:100%;aspect-ratio:1;background:{hex_val};border-radius:4px"></div>'
-                f'<span style="font-size:11px">{key}</span>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
+    return f'<div style="display:flex;gap:3px;width:100%;min-height:40px">{squares}</div>'
 
 
 # Aspect ratio presets: (label, width_inches, height_inches)
@@ -484,8 +469,6 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                 key=f"picker_{selected_theme}_{key}_{picker_key_suffix}",
             )
             st.session_state.theme_colors[key] = val
-
-    render_color_swatches(st.session_state.theme_colors)
 
     # --- Actions ---
     st.subheader("Generate")
