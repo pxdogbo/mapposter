@@ -799,7 +799,7 @@ def create_poster(
     dpi = 300
     fig_height_px = height * dpi
     px_to_axes = 1.0 / fig_height_px
-    row_gap = 12 * px_to_axes  # 12px between city, line, country, coords
+    row_gap = 20 * px_to_axes  # 20px between city, line, country, coords
     y_top_block = 0.14
     y_city = y_top_block
     y_line = y_top_block - row_gap
