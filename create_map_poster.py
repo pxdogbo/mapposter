@@ -183,18 +183,17 @@ def get_available_themes():
     return themes
 
 
-def load_theme(theme_name="terracotta"):
+def load_theme(theme_name="default"):
     """
     Load theme from JSON file in themes directory.
     """
     theme_file = os.path.join(THEMES_DIR, f"{theme_name}.json")
 
     if not os.path.exists(theme_file):
-        print(f"⚠ Theme file '{theme_file}' not found. Using default terracotta theme.")
-        # Fallback to embedded terracotta theme
+        print(f"⚠ Theme file '{theme_file}' not found. Using default theme.")
         return {
-            "name": "Terracotta",
-            "description": "Mediterranean warmth - burnt orange and clay tones on cream",
+            "name": "Default",
+            "description": "Default warm earth palette",
             "bg": "#F5EDE4",
             "text": "#8B4513",
             "gradient_color": "#F5EDE4",
@@ -914,7 +913,7 @@ Examples:
 
   # Organic old cities
   python create_map_poster.py -c "Tokyo" -C "Japan" -t japanese_ink -d 15000    # Dense organic streets
-  python create_map_poster.py -c "Marrakech" -C "Morocco" -t terracotta -d 5000 # Medina maze
+  python create_map_poster.py -c "Marrakech" -C "Morocco" -t neon_amber -d 5000 # Medina maze
   python create_map_poster.py -c "Rome" -C "Italy" -t warm_beige -d 8000        # Ancient street layout
 
   # Coastal cities
@@ -933,7 +932,7 @@ Options:
   --city, -c        City name (required)
   --country, -C     Country name (required)
   --country-label   Override country text displayed on poster
-  --theme, -t       Theme name (default: terracotta)
+  --theme, -t       Theme name (default: neon_green)
   --all-themes      Generate posters for all themes
   --distance, -d    Map radius in meters (default: 18000)
   --list-themes     List all available themes
@@ -1014,8 +1013,8 @@ Examples:
         "--theme",
         "-t",
         type=str,
-        default="terracotta",
-        help="Theme name (default: terracotta)",
+        default="neon_green",
+        help="Theme name (default: neon_green)",
     )
     parser.add_argument(
         "--all-themes",

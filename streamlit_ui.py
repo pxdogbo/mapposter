@@ -7,7 +7,7 @@ Usage:
 
 The app opens in your browser. From there you can:
 - Pick a city from the dropdown (country auto-selects), and set distance (meters)
-- Pick an existing theme or start from scratch (terracotta base)
+- Pick an existing theme or start from scratch
 - Adjust colors for each theme key via color pickers
 - See live color swatches for the current palette
 - Click "Generate preview" for fast feedback (smaller radius, 6x8 in, PNG)
@@ -336,7 +336,7 @@ with col_left:
     for i, theme_id in enumerate(available):
         with theme_cols[i % 3]:
             colors = load_theme_colors(theme_id)
-            display_name = "From scratch (terracotta)" if theme_id == "From scratch" else theme_id.replace("_", " ").title()
+            display_name = "From scratch" if theme_id == "From scratch" else theme_id.replace("_", " ").title()
             is_selected = st.session_state.get("theme_select") == theme_id
             border = "2px solid #1f77b4" if is_selected else "1px solid #ddd"
             st.markdown(

@@ -38,8 +38,8 @@ python create_map_poster.py -c "Moscow" -C "Russia" -t noir -d 12000
 echo "[8/15] Tokyo — Dense organic streets (japanese_ink)"
 python create_map_poster.py -c "Tokyo" -C "Japan" -t japanese_ink -d 15000
 
-echo "[9/15] Marrakech — Medina maze (terracotta)"
-python create_map_poster.py -c "Marrakech" -C "Morocco" -t terracotta -d 5000
+echo "[9/15] Marrakech — Medina maze (neon_amber)"
+python create_map_poster.py -c "Marrakech" -C "Morocco" -t neon_amber -d 5000
 
 echo "[10/15] Rome — Ancient street layout (warm_beige)"
 python create_map_poster.py -c "Rome" -C "Italy" -t warm_beige -d 8000

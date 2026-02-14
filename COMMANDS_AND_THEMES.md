@@ -29,7 +29,7 @@ Reference for the original city/theme/distance combinations that showcase iconic
 | City | Country | Theme | Distance | Notes |
 |------|---------|-------|----------|-------|
 | Tokyo | Japan | japanese_ink | 15000 | Dense organic streets |
-| Marrakech | Morocco | terracotta | 5000 | Medina maze |
+| Marrakech | Morocco | neon_amber | 5000 | Medina maze |
 | Rome | Italy | warm_beige | 8000 | Ancient street layout |
 
 ## Coastal cities
@@ -67,7 +67,7 @@ python create_map_poster.py -c "Moscow" -C "Russia" -t noir -d 12000
 
 # Organic old cities
 python create_map_poster.py -c "Tokyo" -C "Japan" -t japanese_ink -d 15000
-python create_map_poster.py -c "Marrakech" -C "Morocco" -t terracotta -d 5000
+python create_map_poster.py -c "Marrakech" -C "Morocco" -t neon_amber -d 5000
 python create_map_poster.py -c "Rome" -C "Italy" -t warm_beige -d 8000
 
 # Coastal cities
