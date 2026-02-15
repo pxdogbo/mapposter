@@ -27,7 +27,6 @@ from pathlib import Path
 import requests
 import streamlit as st
 from PIL import Image
-from streamlit_image_comparison import image_comparison
 
 import create_map_poster
 from font_management import load_fonts
@@ -744,17 +743,15 @@ with col_right:
         gen_img = st.session_state.generated_image
 
         if live_img and gen_img:
-            # A/B slider using JuxtaposeJS (streamlit-image-comparison)
-            st.caption(f"**Preview** · Drag to compare · Live: {LIVE_PRESET_CITY}, {LIVE_PRESET_COUNTRY} ({LIVE_PRESET_DIST//1000} km)")
-            image_comparison(
-                img1=Image.open(io.BytesIO(live_img)),
-                img2=Image.open(io.BytesIO(gen_img)),
-                label1="Live",
-                label2="Generated",
-                starting_position=50,
-                show_labels=True,
-                make_responsive=True,
-            )
+            # A/B comparison: Live vs Generated side by side (native Streamlit)
+            st.caption(f"**Preview** · Live: {LIVE_PRESET_CITY}, {LIVE_PRESET_COUNTRY} ({LIVE_PRESET_DIST//1000} km)")
+            col_a, col_b = st.columns(2)
+            with col_a:
+                st.caption("**Live**")
+                st.image(live_img, use_container_width=True)
+            with col_b:
+                st.caption("**Generated**")
+                st.image(gen_img, use_container_width=True)
         elif live_img:
             st.caption(f"**Preview** · Live: {LIVE_PRESET_CITY}, {LIVE_PRESET_COUNTRY} ({LIVE_PRESET_DIST//1000} km)")
             st.image(live_img, use_container_width=True)

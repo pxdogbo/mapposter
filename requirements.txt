@@ -30,5 +30,4 @@ tqdm==4.67.1
 tzdata==2025.3
 urllib3==2.6.3
 streamlit>=1.28.0
-streamlit-image-comparison>=0.0.4
 colour-science>=0.4.0
