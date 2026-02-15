@@ -15,6 +15,7 @@ The app opens in your browser. From there you can:
 - Click "Save theme" to write the current colors to a new JSON file in themes/
 """
 
+import io
 import json
 import math
 import os
@@ -23,6 +24,8 @@ import tempfile
 from pathlib import Path
 
 import streamlit as st
+from PIL import Image
+from streamlit_image_comparison import image_comparison
 
 import create_map_poster
 from font_management import load_fonts
@@ -645,30 +648,42 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                 st.error(f"Save failed: {e}")
 
 with col_right:
-    with st.container(height=880):  # Scrollable so right side scrolls independently
-        st.subheader("Preview")
-        # Live preset map — updates automatically when you change colors
-        if st.session_state.live_preview_image:
-            st.caption(f"**Live** · {LIVE_PRESET_CITY}, {LIVE_PRESET_COUNTRY} ({LIVE_PRESET_DIST//1000} km) — updates as you pick colors")
+    with st.container(height=960):  # Taller so poster fits above the fold without scrolling
+        # Compact header: single line to leave more room for poster
+        live_img = st.session_state.live_preview_image
+        gen_img = st.session_state.generated_image
+
+        if live_img and gen_img:
+            # A/B slider: Live (A) vs Generated (B) in shared container
+            st.caption(f"**Preview** · Drag to compare · Live: {LIVE_PRESET_CITY}, {LIVE_PRESET_COUNTRY} ({LIVE_PRESET_DIST//1000} km)")
+            img_a = Image.open(io.BytesIO(live_img))
+            img_b = Image.open(io.BytesIO(gen_img))
+            image_comparison(
+                img1=img_a,
+                img2=img_b,
+                label1="Live",
+                label2="Generated",
+                show_labels=True,
+                make_responsive=True,
+                in_memory=True,
+            )
+        elif live_img:
+            st.caption(f"**Preview** · Live: {LIVE_PRESET_CITY}, {LIVE_PRESET_COUNTRY} ({LIVE_PRESET_DIST//1000} km)")
+            st.image(live_img, use_container_width=True)
+        elif gen_img:
+            st.caption("**Preview** · Last generated")
             st.image(
-                st.session_state.live_preview_image,
+                gen_img,
+                caption=st.session_state.generated_caption,
                 use_container_width=True,
             )
         else:
             st.info("Loading live preview… (preset map will update as you change colors)")
 
-        # Last result from "Generate preview" / "Generate full poster"
-        if st.session_state.generated_image:
-            st.divider()
-            st.caption("**Last generated**")
-            st.image(
-                st.session_state.generated_image,
-                caption=st.session_state.generated_caption,
-                use_container_width=True,
-            )
+        if gen_img:
             st.download_button(
                 "Download PNG",
-                data=st.session_state.generated_image,
+                data=gen_img,
                 file_name=st.session_state.generated_filename,
                 mime="image/png",
                 key="download_png",
