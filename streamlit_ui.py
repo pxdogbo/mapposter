@@ -15,6 +15,7 @@ The app opens in your browser. From there you can:
 - Click "Save theme" to write the current colors to a new JSON file in themes/
 """
 
+import base64
 import io
 import json
 import math
@@ -24,8 +25,7 @@ import tempfile
 from pathlib import Path
 
 import streamlit as st
-from PIL import Image
-from streamlit_image_comparison import image_comparison
+import streamlit.components.v1 as components
 
 import create_map_poster
 from font_management import load_fonts
@@ -55,6 +55,57 @@ except ImportError:
 
     def oklch_to_hex(l: float, c: float, h_deg: float) -> str:
         return "#000000"
+
+
+def _image_comparison_slider(img_a_b64: str, img_b_b64: str, label_a: str, label_b: str) -> None:
+    """Render an A/B image comparison slider using pure HTML/CSS/JS (no external deps)."""
+    html = f"""
+    <style>
+    .img-comp-container {{ position: relative; width: 100%; max-width: 100%; }}
+    .img-comp-img {{ display: block; width: 100%; vertical-align: middle; }}
+    .img-comp-overlay {{ position: absolute; top: 0; left: 0; width: 50%; height: 100%; overflow: hidden; }}
+    .img-comp-overlay img {{ display: block; width: 200%; max-width: none; height: 100%; }}
+    .img-comp-slider {{ position: absolute; z-index: 10; cursor: ew-resize; width: 4px; height: 100%;
+        background: #fff; left: 50%; transform: translateX(-50%);
+        box-shadow: 0 0 4px rgba(0,0,0,0.5); }}
+    .img-comp-slider::before {{ content: ''; position: absolute; left: 50%; top: 50%;
+        width: 32px; height: 32px; margin: -16px 0 0 -16px;
+        border: 3px solid #fff; border-radius: 50%; background: rgba(0,0,0,0.3);
+        box-shadow: 0 0 6px rgba(0,0,0,0.5); }}
+    .img-comp-labels {{ position: absolute; bottom: 8px; z-index: 11; font: 12px sans-serif;
+        color: #fff; text-shadow: 0 1px 2px #000; pointer-events: none; }}
+    .img-comp-labels .left {{ left: 12px; }}
+    .img-comp-labels .right {{ right: 12px; }}
+    </style>
+    <div class="img-comp-container" id="ic">
+        <img class="img-comp-img" src="data:image/png;base64,{img_b_b64}" alt="B">
+        <div class="img-comp-overlay">
+            <img src="data:image/png;base64,{img_a_b64}" alt="A">
+        </div>
+        <div class="img-comp-slider" id="slider"></div>
+        <div class="img-comp-labels"><span class="left">{label_a}</span><span class="right">{label_b}</span></div>
+    </div>
+    <script>
+    (function() {{
+        var c = document.getElementById('ic');
+        var slider = document.getElementById('slider');
+        var overlay = c.querySelector('.img-comp-overlay');
+        function move(e) {{
+            var x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+            var rect = c.getBoundingClientRect();
+            var pct = Math.max(0, Math.min(100, ((x - rect.left) / rect.width) * 100));
+            overlay.style.width = pct + '%';
+        }}
+        slider.addEventListener('mousedown', function() {{ document.addEventListener('mousemove', move); }});
+        document.addEventListener('mouseup', function() {{ document.removeEventListener('mousemove', move); }});
+        slider.addEventListener('touchstart', function(e) {{ document.addEventListener('touchmove', move); }}, {{passive:true}});
+        document.addEventListener('touchend', function() {{ document.removeEventListener('touchmove', move); }});
+        c.addEventListener('mousedown', function(e) {{ if (e.target === c || e.target === slider) move(e); }});
+        c.addEventListener('touchstart', function(e) {{ if (e.target === c || e.target === slider) move(e); }}, {{passive:true}});
+    }})();
+    </script>
+    """
+    components.html(html, height=520, scrolling=False)
 
 
 def parse_oklch_input(raw: str) -> tuple[float, float, float] | None:
@@ -654,19 +705,11 @@ with col_right:
         gen_img = st.session_state.generated_image
 
         if live_img and gen_img:
-            # A/B slider: Live (A) vs Generated (B) in shared container
+            # A/B slider: Live (A) vs Generated (B) in shared container (pure HTML/CSS/JS, no deps)
             st.caption(f"**Preview** · Drag to compare · Live: {LIVE_PRESET_CITY}, {LIVE_PRESET_COUNTRY} ({LIVE_PRESET_DIST//1000} km)")
-            img_a = Image.open(io.BytesIO(live_img))
-            img_b = Image.open(io.BytesIO(gen_img))
-            image_comparison(
-                img1=img_a,
-                img2=img_b,
-                label1="Live",
-                label2="Generated",
-                show_labels=True,
-                make_responsive=True,
-                in_memory=True,
-            )
+            a_b64 = base64.b64encode(live_img).decode()
+            b_b64 = base64.b64encode(gen_img).decode()
+            _image_comparison_slider(a_b64, b_b64, "Live", "Generated")
         elif live_img:
             st.caption(f"**Preview** · Live: {LIVE_PRESET_CITY}, {LIVE_PRESET_COUNTRY} ({LIVE_PRESET_DIST//1000} km)")
             st.image(live_img, use_container_width=True)
