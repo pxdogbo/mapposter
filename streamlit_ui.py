@@ -645,30 +645,31 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                 st.error(f"Save failed: {e}")
 
 with col_right:
-    st.subheader("Preview")
-    # Live preset map — updates automatically when you change colors
-    if st.session_state.live_preview_image:
-        st.caption(f"**Live** · {LIVE_PRESET_CITY}, {LIVE_PRESET_COUNTRY} ({LIVE_PRESET_DIST//1000} km) — updates as you pick colors")
-        st.image(
-            st.session_state.live_preview_image,
-            use_container_width=True,
-        )
-    else:
-        st.info("Loading live preview… (preset map will update as you change colors)")
+    with st.container(height=880):  # Scrollable so right side scrolls independently
+        st.subheader("Preview")
+        # Live preset map — updates automatically when you change colors
+        if st.session_state.live_preview_image:
+            st.caption(f"**Live** · {LIVE_PRESET_CITY}, {LIVE_PRESET_COUNTRY} ({LIVE_PRESET_DIST//1000} km) — updates as you pick colors")
+            st.image(
+                st.session_state.live_preview_image,
+                use_container_width=True,
+            )
+        else:
+            st.info("Loading live preview… (preset map will update as you change colors)")
 
-    # Last result from "Generate preview" / "Generate full poster"
-    if st.session_state.generated_image:
-        st.divider()
-        st.caption("**Last generated**")
-        st.image(
-            st.session_state.generated_image,
-            caption=st.session_state.generated_caption,
-            use_container_width=True,
-        )
-        st.download_button(
-            "Download PNG",
-            data=st.session_state.generated_image,
-            file_name=st.session_state.generated_filename,
-            mime="image/png",
-            key="download_png",
-        )
+        # Last result from "Generate preview" / "Generate full poster"
+        if st.session_state.generated_image:
+            st.divider()
+            st.caption("**Last generated**")
+            st.image(
+                st.session_state.generated_image,
+                caption=st.session_state.generated_caption,
+                use_container_width=True,
+            )
+            st.download_button(
+                "Download PNG",
+                data=st.session_state.generated_image,
+                file_name=st.session_state.generated_filename,
+                mime="image/png",
+                key="download_png",
+            )
