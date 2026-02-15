@@ -415,12 +415,12 @@ with col_left:
                 )
                 btn_col1, btn_col2 = st.columns([3, 1])
                 with btn_col1:
-                    if st.button(display_name, key=f"theme_btn_{theme_id}", type="primary" if is_selected else "secondary", use_container_width=True):
+                    if st.button(display_name, key=f"theme_btn_{theme_id}", type="primary" if is_selected else "secondary", width='stretch'):
                         st.session_state["theme_select"] = theme_id
                         st.rerun()
                 if theme_id != "From scratch":
                     with btn_col2:
-                        if st.button("🗑", key=f"del_{theme_id}", help=f"Delete {display_name}", use_container_width=True):
+                        if st.button("🗑", key=f"del_{theme_id}", help=f"Delete {display_name}", width='stretch'):
                             if delete_theme_from_file(theme_id):
                                 if st.session_state.get("theme_select") == theme_id:
                                     st.session_state["theme_select"] = "From scratch"
@@ -748,19 +748,19 @@ with col_right:
             col_a, col_b = st.columns(2)
             with col_a:
                 st.caption("**Live**")
-                st.image(live_img, use_container_width=True)
+                st.image(live_img, width='stretch')
             with col_b:
                 st.caption("**Generated**")
-                st.image(gen_img, use_container_width=True)
+                st.image(gen_img, width='stretch')
         elif live_img:
             st.caption(f"**Preview** · Live: {LIVE_PRESET_CITY}, {LIVE_PRESET_COUNTRY} ({LIVE_PRESET_DIST//1000} km)")
-            st.image(live_img, use_container_width=True)
+            st.image(live_img, width='stretch')
         elif gen_img:
             st.caption("**Preview** · Last generated")
             st.image(
                 gen_img,
                 caption=st.session_state.generated_caption,
-                use_container_width=True,
+                width='stretch',
             )
         else:
             st.info("Loading live preview… (preset map will update as you change colors)")
