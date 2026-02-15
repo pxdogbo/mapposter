@@ -41,6 +41,7 @@ dependencies = [
     "shapely==2.1.2",
     "six==1.17.0",
     "streamlit>=1.54.0",
+    "streamlit-image-comparison>=0.0.4",
     "tqdm==4.67.1",
     "tzdata==2025.3",
     "urllib3==2.6.3",
