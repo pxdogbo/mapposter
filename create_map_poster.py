@@ -19,6 +19,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import cast
 
+import matplotlib
+matplotlib.use("Agg")  # Headless backend required for Streamlit Cloud
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
