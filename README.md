@@ -1,6 +1,6 @@
 # Map Poster
 
-Generate minimalist map posters for any city using OpenStreetMap data. Pick a city, choose a theme, and export print-ready images.
+TEST CHANGE: Generate minimalist map posters for any city using OpenStreetMap data. Pick a city, choose a theme, and export print-ready images.
 
 ## Quick start
 
