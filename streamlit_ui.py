@@ -24,8 +24,10 @@ import re
 import tempfile
 from pathlib import Path
 
+import requests
 import streamlit as st
-import streamlit.components.v1 as components
+from PIL import Image
+from streamlit_image_comparison import image_comparison
 
 import create_map_poster
 from font_management import load_fonts
@@ -55,57 +57,6 @@ except ImportError:
 
     def oklch_to_hex(l: float, c: float, h_deg: float) -> str:
         return "#000000"
-
-
-def _image_comparison_slider(img_a_b64: str, img_b_b64: str, label_a: str, label_b: str) -> None:
-    """Render an A/B image comparison slider using pure HTML/CSS/JS (no external deps)."""
-    html = f"""
-    <style>
-    .img-comp-container {{ position: relative; width: 100%; max-width: 100%; }}
-    .img-comp-img {{ display: block; width: 100%; vertical-align: middle; }}
-    .img-comp-overlay {{ position: absolute; top: 0; left: 0; width: 50%; height: 100%; overflow: hidden; }}
-    .img-comp-overlay img {{ display: block; width: 200%; max-width: none; height: 100%; }}
-    .img-comp-slider {{ position: absolute; z-index: 10; cursor: ew-resize; width: 4px; height: 100%;
-        background: #fff; left: 50%; transform: translateX(-50%);
-        box-shadow: 0 0 4px rgba(0,0,0,0.5); }}
-    .img-comp-slider::before {{ content: ''; position: absolute; left: 50%; top: 50%;
-        width: 32px; height: 32px; margin: -16px 0 0 -16px;
-        border: 3px solid #fff; border-radius: 50%; background: rgba(0,0,0,0.3);
-        box-shadow: 0 0 6px rgba(0,0,0,0.5); }}
-    .img-comp-labels {{ position: absolute; bottom: 8px; z-index: 11; font: 12px sans-serif;
-        color: #fff; text-shadow: 0 1px 2px #000; pointer-events: none; }}
-    .img-comp-labels .left {{ left: 12px; }}
-    .img-comp-labels .right {{ right: 12px; }}
-    </style>
-    <div class="img-comp-container" id="ic">
-        <img class="img-comp-img" src="data:image/png;base64,{img_b_b64}" alt="B">
-        <div class="img-comp-overlay">
-            <img src="data:image/png;base64,{img_a_b64}" alt="A">
-        </div>
-        <div class="img-comp-slider" id="slider"></div>
-        <div class="img-comp-labels"><span class="left">{label_a}</span><span class="right">{label_b}</span></div>
-    </div>
-    <script>
-    (function() {{
-        var c = document.getElementById('ic');
-        var slider = document.getElementById('slider');
-        var overlay = c.querySelector('.img-comp-overlay');
-        function move(e) {{
-            var x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-            var rect = c.getBoundingClientRect();
-            var pct = Math.max(0, Math.min(100, ((x - rect.left) / rect.width) * 100));
-            overlay.style.width = pct + '%';
-        }}
-        slider.addEventListener('mousedown', function() {{ document.addEventListener('mousemove', move); }});
-        document.addEventListener('mouseup', function() {{ document.removeEventListener('mousemove', move); }});
-        slider.addEventListener('touchstart', function(e) {{ document.addEventListener('touchmove', move); }}, {{passive:true}});
-        document.addEventListener('touchend', function() {{ document.removeEventListener('touchmove', move); }});
-        c.addEventListener('mousedown', function(e) {{ if (e.target === c || e.target === slider) move(e); }});
-        c.addEventListener('touchstart', function(e) {{ if (e.target === c || e.target === slider) move(e); }}, {{passive:true}});
-    }})();
-    </script>
-    """
-    components.html(html, height=520, scrolling=False)
 
 
 def parse_oklch_input(raw: str) -> tuple[float, float, float] | None:
@@ -303,6 +254,52 @@ def save_theme_to_file(theme: dict, filename: str) -> str:
     with open(path, "w", encoding="utf-8") as f:
         json.dump(theme, f, indent=2)
     return str(path)
+
+
+def _save_theme_to_github(theme: dict, filename: str) -> tuple[bool, str]:
+    """
+    Persist theme to GitHub repo via API. Returns (success, message).
+    Requires GITHUB_TOKEN in Streamlit secrets; GITHUB_REPO (owner/repo) optional, defaults to pxdogbo/mapposter.
+    """
+    try:
+        token = st.secrets.get("GITHUB_TOKEN")
+    except Exception:
+        token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        return False, "GITHUB_TOKEN not configured (add to Streamlit secrets for Cloud)"
+
+    repo = "pxdogbo/mapposter"
+    try:
+        repo = st.secrets.get("GITHUB_REPO", repo)
+    except Exception:
+        repo = os.environ.get("GITHUB_REPO", repo)
+
+    content = json.dumps(theme, indent=2)
+    encoded = base64.b64encode(content.encode("utf-8")).decode("utf-8")
+    path = f"themes/{filename}.json"
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    url = f"https://api.github.com/repos/{repo}/contents/{path}"
+
+    # Get existing file SHA if it exists (required for update)
+    r = requests.get(url, headers=headers, timeout=10)
+    sha = r.json().get("sha") if r.status_code == 200 else None
+
+    payload = {
+        "message": f"Add/update theme: {filename}",
+        "content": encoded,
+    }
+    if sha:
+        payload["sha"] = sha
+
+    resp = requests.put(url, headers=headers, json=payload, timeout=15)
+    if resp.status_code in (200, 201):
+        return True, f"Saved to GitHub (themes/{filename}.json)"
+    return False, resp.json().get("message", resp.text)
 
 
 def _load_hidden_themes() -> list[str]:
@@ -670,6 +667,12 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
 
         st.divider()
         st.subheader("Save palette")
+        try:
+            has_token = bool(st.secrets.get("GITHUB_TOKEN", ""))
+        except (Exception, FileNotFoundError):
+            has_token = bool(os.environ.get("GITHUB_TOKEN", ""))
+        if not has_token:
+            st.caption("💡 Add **GITHUB_TOKEN** to Streamlit secrets (Manage app → Settings) to save themes forever on Cloud.")
         if selected_theme != "From scratch":
             if st.button("Update current theme", type="primary", key="update_theme_btn"):
                 full_theme = build_full_theme(
@@ -677,26 +680,62 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                     name=selected_theme.replace("_", " ").title(),
                     description=f"Saved from Streamlit UI - {selected_theme}",
                 )
-                try:
-                    path = save_theme_to_file(full_theme, selected_theme)
-                    st.success(f"Updated **{selected_theme.replace('_', ' ').title()}**")
+                ok, msg = _save_theme_to_github(full_theme, selected_theme)
+                if ok:
+                    st.success(f"Updated **{selected_theme.replace('_', ' ').title()}** — {msg}")
+                    try:
+                        save_theme_to_file(full_theme, selected_theme)
+                    except OSError:
+                        pass  # on Cloud, local fs may be read-only; GitHub save is enough
                     st.rerun()
-                except Exception as e:
-                    st.error(f"Update failed: {e}")
+                else:
+                    try:
+                        path = save_theme_to_file(full_theme, selected_theme)
+                        st.success(f"Updated **{selected_theme.replace('_', ' ').title()}** (local: {path})")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Update failed: {e}. {msg}" if msg else str(e))
             st.caption("Or save as a new palette below.")
         theme_name = st.text_input("Save as new palette", value="my_theme", key="save_name")
         if st.button("Save as new"):
+            theme_name = theme_name.strip().replace(" ", "_") or "my_theme"
             full_theme = build_full_theme(
                 st.session_state.theme_colors,
                 name=theme_name.replace("_", " ").title(),
                 description=f"Saved from Streamlit UI - {theme_name}",
             )
-            try:
-                path = save_theme_to_file(full_theme, theme_name)
-                st.success(f"Theme **{theme_name}** saved to `{path}`")
+            ok, msg = _save_theme_to_github(full_theme, theme_name)
+            if ok:
+                st.success(f"Theme **{theme_name}** saved forever — {msg}")
+                try:
+                    save_theme_to_file(full_theme, theme_name)
+                except OSError:
+                    pass
                 st.rerun()
-            except Exception as e:
-                st.error(f"Save failed: {e}")
+            else:
+                try:
+                    path = save_theme_to_file(full_theme, theme_name)
+                    st.success(f"Theme **{theme_name}** saved to `{path}`")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Save failed: {e}. {msg}" if msg else str(e))
+
+        # Export current palette as JSON — add to themes/ and commit so it persists on Streamlit Cloud
+        export_name = st.text_input("Export for git (persists across deploys)", value=selected_theme if selected_theme != "From scratch" else "my_theme", key="export_name")
+        export_theme = build_full_theme(
+            st.session_state.theme_colors,
+            name=export_name.replace("_", " ").title(),
+            description=f"Saved from Streamlit UI - {export_name}",
+        )
+        export_json = json.dumps(export_theme, indent=2)
+        st.download_button(
+            "Download JSON",
+            data=export_json,
+            file_name=f"{export_name.replace(' ', '_')}.json",
+            mime="application/json",
+            key="export_theme_json",
+            help="Save to themes/ and git add/commit/push to persist",
+        )
 
 with col_right:
     with st.container(height=960):  # Taller so poster fits above the fold without scrolling
@@ -705,11 +744,17 @@ with col_right:
         gen_img = st.session_state.generated_image
 
         if live_img and gen_img:
-            # A/B slider: Live (A) vs Generated (B) in shared container (pure HTML/CSS/JS, no deps)
+            # A/B slider using JuxtaposeJS (streamlit-image-comparison)
             st.caption(f"**Preview** · Drag to compare · Live: {LIVE_PRESET_CITY}, {LIVE_PRESET_COUNTRY} ({LIVE_PRESET_DIST//1000} km)")
-            a_b64 = base64.b64encode(live_img).decode()
-            b_b64 = base64.b64encode(gen_img).decode()
-            _image_comparison_slider(a_b64, b_b64, "Live", "Generated")
+            image_comparison(
+                img1=Image.open(io.BytesIO(live_img)),
+                img2=Image.open(io.BytesIO(gen_img)),
+                label1="Live",
+                label2="Generated",
+                starting_position=50,
+                show_labels=True,
+                make_responsive=True,
+            )
         elif live_img:
             st.caption(f"**Preview** · Live: {LIVE_PRESET_CITY}, {LIVE_PRESET_COUNTRY} ({LIVE_PRESET_DIST//1000} km)")
             st.image(live_img, use_container_width=True)
