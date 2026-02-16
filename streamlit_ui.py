@@ -352,6 +352,8 @@ if "live_preview_image" not in st.session_state:
     st.session_state.live_preview_image = None
 if "last_live_preview_theme" not in st.session_state:
     st.session_state.last_live_preview_theme = None
+if "live_preview_error" not in st.session_state:
+    st.session_state.live_preview_error = None
 
 # Two-column layout: controls left (scrollable), preview right (fixed)
 col_left, col_right = st.columns([1, 1.2], gap="large")
@@ -662,9 +664,10 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                     st.session_state.live_preview_image = f.read()
                 os.unlink(tmp_path)
                 st.session_state.last_live_preview_theme = current_theme_key
+                st.session_state.live_preview_error = None
             except Exception as e:
-                # Don't block the UI; live preview will retry next run
-                st.session_state.last_live_preview_theme = current_theme_key
+                st.session_state.live_preview_error = str(e)
+                # Don't set last_live_preview_theme so we retry on next rerun
 
         if st.button("Generate preview", type="primary"):
             preview_dist = int(distance * 0.5)
@@ -902,6 +905,12 @@ with col_right:
                 caption=st.session_state.generated_caption,
                 width='stretch',
             )
+        elif st.session_state.get("live_preview_error"):
+            st.error("Live preview failed: " + st.session_state.live_preview_error)
+            if st.button("Retry live preview", key="retry_live"):
+                st.session_state.live_preview_error = None
+                st.session_state.last_live_preview_theme = None
+                st.rerun()
         else:
             st.info("Loading live preview… (preset map will update as you change colors)")
 
