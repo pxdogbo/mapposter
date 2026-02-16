@@ -95,6 +95,7 @@ def parse_oklch_input(raw: str) -> tuple[float, float, float] | None:
 def _norm(s: str) -> str:
     return s.strip().lower().replace("\u2013", "-").replace("–", "-").replace("  ", " ")
 
+
 OKLCH_LABEL_TO_KEY = {
     "background": "bg",
     "text": "text",
@@ -201,10 +202,12 @@ PALETTE_KEYS = ["bg", "road_primary", "road_secondary", "water", "parks", "text"
 def theme_palette_html(colors: dict) -> str:
     """HTML for a horizontal strip of color swatches that fill the container."""
     squares = "".join(
-        f'<div style="flex:1;min-height:40px;background:{colors.get(k,"#666")};border-radius:4px"></div>'
+        f'<div style="flex:1;min-height:40px;background:{colors.get(k, "#666")};border-radius:4px"></div>'
         for k in PALETTE_KEYS
     )
-    return f'<div style="display:flex;gap:3px;width:100%;min-height:40px">{squares}</div>'
+    return (
+        f'<div style="display:flex;gap:3px;width:100%;min-height:40px">{squares}</div>'
+    )
 
 
 # Aspect ratio presets: (label, width_inches, height_inches)
@@ -350,10 +353,10 @@ if "generated_filename" not in st.session_state:
     st.session_state.generated_filename = "map_poster.png"
 if "live_preview_image" not in st.session_state:
     st.session_state.live_preview_image = None
-if "last_live_preview_theme" not in st.session_state:
-    st.session_state.last_live_preview_theme = None
 if "live_preview_error" not in st.session_state:
     st.session_state.live_preview_error = None
+if "live_preview_needs_update" not in st.session_state:
+    st.session_state.live_preview_needs_update = True
 
 # Two-column layout: controls left (scrollable), preview right (fixed)
 col_left, col_right = st.columns([1, 1.2], gap="large")
@@ -368,11 +371,21 @@ with col_left:
         st.subheader("Location & map")
         # Layer visibility checkboxes (inspired by https://github.com/originalankur/maptoposter)
         with st.expander("Map layers", expanded=True):
-            show_water = st.checkbox("Water (lakes, rivers, bays)", value=True, key="show_water")
-            show_parks = st.checkbox("Parks & green spaces", value=True, key="show_parks")
-            show_roads = st.checkbox("Roads (street network)", value=True, key="show_roads")
-            show_gradient = st.checkbox("Gradient fades (top & bottom)", value=True, key="show_gradient")
-            show_labels = st.checkbox("Labels (city, country, coordinates)", value=True, key="show_labels")
+            show_water = st.checkbox(
+                "Water (lakes, rivers, bays)", value=True, key="show_water"
+            )
+            show_parks = st.checkbox(
+                "Parks & green spaces", value=True, key="show_parks"
+            )
+            show_roads = st.checkbox(
+                "Roads (street network)", value=True, key="show_roads"
+            )
+            show_gradient = st.checkbox(
+                "Gradient fades (top & bottom)", value=True, key="show_gradient"
+            )
+            show_labels = st.checkbox(
+                "Labels (city, country, coordinates)", value=True, key="show_labels"
+            )
         city_labels = [f"{c}, {co}" for c, co in CITIES]
         city_idx = st.selectbox(
             "City",
@@ -392,10 +405,17 @@ with col_left:
 
         # Optional overrides: lat/long, label overrides, custom dimensions
         with st.expander("Overrides (optional)", expanded=False):
-            use_coords_override = st.checkbox("Use custom center (lat/long) instead of city geocoding", key="use_coords")
+            use_coords_override = st.checkbox(
+                "Use custom center (lat/long) instead of city geocoding",
+                key="use_coords",
+            )
             if use_coords_override:
-                lat_override = st.number_input("Latitude", value=52.3676, format="%.4f", key="lat_override")
-                lon_override = st.number_input("Longitude", value=4.9041, format="%.4f", key="lon_override")
+                lat_override = st.number_input(
+                    "Latitude", value=52.3676, format="%.4f", key="lat_override"
+                )
+                lon_override = st.number_input(
+                    "Longitude", value=4.9041, format="%.4f", key="lon_override"
+                )
             else:
                 lat_override, lon_override = None, None
 
@@ -421,14 +441,36 @@ with col_left:
             )
             display_country_override = display_country_override.strip() or None
 
-            use_custom_dims = st.checkbox("Custom width × height (override preset)", key="use_custom_dims")
+            use_custom_dims = st.checkbox(
+                "Custom width × height (override preset)", key="use_custom_dims"
+            )
             if use_custom_dims:
-                custom_w = st.number_input("Width (inches)", min_value=3.0, max_value=20.0, value=12.0, step=0.5, key="custom_w")
-                custom_h = st.number_input("Height (inches)", min_value=3.0, max_value=20.0, value=16.0, step=0.5, key="custom_h")
+                custom_w = st.number_input(
+                    "Width (inches)",
+                    min_value=3.0,
+                    max_value=20.0,
+                    value=12.0,
+                    step=0.5,
+                    key="custom_w",
+                )
+                custom_h = st.number_input(
+                    "Height (inches)",
+                    min_value=3.0,
+                    max_value=20.0,
+                    value=16.0,
+                    step=0.5,
+                    key="custom_h",
+                )
             else:
                 custom_w, custom_h = None, None
 
-        coords_override = (float(lat_override), float(lon_override)) if use_coords_override and lat_override is not None and lon_override is not None else None
+        coords_override = (
+            (float(lat_override), float(lon_override))
+            if use_coords_override
+            and lat_override is not None
+            and lon_override is not None
+            else None
+        )
 
         # --- Aspect ratio ---
         st.subheader("Aspect ratio")
@@ -442,14 +484,15 @@ with col_left:
         if use_custom_dims and custom_w is not None and custom_h is not None:
             chosen_w, chosen_h = custom_w, custom_h
         else:
-            chosen_w, chosen_h = next((r[1], r[2]) for r in ASPECT_RATIOS if r[0] == ratio_choice)
+            chosen_w, chosen_h = next(
+                (r[1], r[2]) for r in ASPECT_RATIOS if r[0] == ratio_choice
+            )
 
         # --- Theme selection (grid with palette previews) ---
         st.subheader("Theme")
         hidden = _load_hidden_themes()
         available = ["From scratch"] + [
-            t for t in create_map_poster.get_available_themes()
-            if t not in hidden
+            t for t in create_map_poster.get_available_themes() if t not in hidden
         ]
 
         # Theme cards in 3-column grid — click the card to select; delete on saved themes
@@ -457,23 +500,37 @@ with col_left:
         for i, theme_id in enumerate(available):
             with theme_cols[i % 3]:
                 colors = load_theme_colors(theme_id)
-                display_name = "From scratch" if theme_id == "From scratch" else theme_id.replace("_", " ").title()
+                display_name = (
+                    "From scratch"
+                    if theme_id == "From scratch"
+                    else theme_id.replace("_", " ").title()
+                )
                 is_selected = st.session_state.get("theme_select") == theme_id
                 border = "2px solid #1f77b4" if is_selected else "1px solid #ddd"
                 st.markdown(
                     f'<div style="padding:6px;margin-bottom:4px;border-radius:6px;border:{border};background:transparent">'
-                    f'{theme_palette_html(colors)}'
-                    f'</div>',
+                    f"{theme_palette_html(colors)}"
+                    f"</div>",
                     unsafe_allow_html=True,
                 )
                 btn_col1, btn_col2 = st.columns([3, 1])
                 with btn_col1:
-                    if st.button(display_name, key=f"theme_btn_{theme_id}", type="primary" if is_selected else "secondary", width='stretch'):
+                    if st.button(
+                        display_name,
+                        key=f"theme_btn_{theme_id}",
+                        type="primary" if is_selected else "secondary",
+                        width="stretch",
+                    ):
                         st.session_state["theme_select"] = theme_id
                         st.rerun()
                 if theme_id != "From scratch":
                     with btn_col2:
-                        if st.button("🗑", key=f"del_{theme_id}", help=f"Delete {display_name}", width='stretch'):
+                        if st.button(
+                            "🗑",
+                            key=f"del_{theme_id}",
+                            help=f"Delete {display_name}",
+                            width="stretch",
+                        ):
                             if delete_theme_from_file(theme_id):
                                 if st.session_state.get("theme_select") == theme_id:
                                     st.session_state["theme_select"] = "From scratch"
@@ -491,7 +548,9 @@ with col_left:
         if st.session_state.get("last_theme") != selected_theme:
             st.session_state.theme_colors = load_theme_colors(selected_theme)
             st.session_state.last_theme = selected_theme
-            st.session_state["palette_version"] = st.session_state.get("palette_version", 0) + 1
+            st.session_state["palette_version"] = (
+                st.session_state.get("palette_version", 0) + 1
+            )
 
         # --- Color pickers in grid ---
         st.subheader("Theme colors")
@@ -512,8 +571,13 @@ with col_left:
         # Paste OKLCH from https://oklch.com
         with st.expander("Paste OKLCH (from [oklch.com](https://oklch.com))"):
             if HAS_OKLCH:
-                with st.expander("Copy this prompt to generate an OKLCH palette (e.g. with an AI)", expanded=False):
-                    st.caption("Paste the prompt below into an AI or use it as a brief. Then paste the model’s output into the box further down.")
+                with st.expander(
+                    "Copy this prompt to generate an OKLCH palette (e.g. with an AI)",
+                    expanded=False,
+                ):
+                    st.caption(
+                        "Paste the prompt below into an AI or use it as a brief. Then paste the model’s output into the box further down."
+                    )
                     OKLCH_PROMPT_TEMPLATE = """Create an OKLCH palette for a map poster theme. For each of these 11 roles, output one line in this exact format: Label: L, C, H (Lightness 0–1, Chroma, Hue 0–360°). Use this order and these labels:
 
 Background: L, C, H
@@ -531,40 +595,50 @@ Road – default: L, C, H
 Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast). I will paste the output into a map theme editor that accepts OKLCH."""
                     st.code(OKLCH_PROMPT_TEMPLATE, language=None)
 
-                st.markdown("**Paste all 11 colors at once** — one line per key, no need to select an element.")
+                st.markdown(
+                    "**Paste all 11 colors at once** — one line per key, no need to select an element."
+                )
                 oklch_placeholder = "\n".join(
-                [
-                    "Background: L, C, H",
-                    "Text: L, C, H",
-                    "Gradient: L, C, H",
-                    "Water: L, C, H",
-                    "Parks: L, C, H",
-                    "Road – motorway: L, C, H",
-                    "Road – primary: L, C, H",
-                    "Road – secondary: L, C, H",
-                    "Road – tertiary: L, C, H",
-                    "Road – residential: L, C, H",
-                    "Road – default: L, C, H",
-                ]
+                    [
+                        "Background: L, C, H",
+                        "Text: L, C, H",
+                        "Gradient: L, C, H",
+                        "Water: L, C, H",
+                        "Parks: L, C, H",
+                        "Road – motorway: L, C, H",
+                        "Road – primary: L, C, H",
+                        "Road – secondary: L, C, H",
+                        "Road – tertiary: L, C, H",
+                        "Road – residential: L, C, H",
+                        "Road – default: L, C, H",
+                    ]
                 )
                 oklch_palette_raw = st.text_area(
-                "Paste your full palette here (one line per color)",
-                placeholder=oklch_placeholder,
-                key="oklch_palette_input",
-                height=140,
-                label_visibility="collapsed",
+                    "Paste your full palette here (one line per color)",
+                    placeholder=oklch_placeholder,
+                    key="oklch_palette_input",
+                    height=140,
+                    label_visibility="collapsed",
                 )
-                if st.button("Apply full palette", key="oklch_apply_all", type="primary"):
+                if st.button(
+                    "Apply full palette", key="oklch_apply_all", type="primary"
+                ):
                     applied = parse_oklch_palette_block(oklch_palette_raw)
                     if applied:
                         for k, hex_val in applied.items():
                             st.session_state.theme_colors[k] = hex_val
                         # Force color pickers to re-initialize with new colors (they'd otherwise keep old state and overwrite)
-                        st.session_state["palette_version"] = st.session_state.get("palette_version", 0) + 1
-                        st.success(f"Applied {len(applied)} colors. No need to select anything — each line sets its own key.")
+                        st.session_state["palette_version"] = (
+                            st.session_state.get("palette_version", 0) + 1
+                        )
+                        st.success(
+                            f"Applied {len(applied)} colors. No need to select anything — each line sets its own key."
+                        )
                         st.rerun()
                     else:
-                        st.error("Could not parse. Paste lines like: Background: 0.18, 0.05, 282.82")
+                        st.error(
+                            "Could not parse. Paste lines like: Background: 0.18, 0.05, 282.82"
+                        )
 
                 with st.expander("Or paste one color and apply to a single key"):
                     oklch_raw = st.text_input(
@@ -586,7 +660,9 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                             st.success(f"Set {oklch_apply_key} to {hex_val}")
                             st.rerun()
                         else:
-                            st.error("Could not parse OKLCH. Use: L, C, H (e.g. 0.726, 0.129, 253.06)")
+                            st.error(
+                                "Could not parse OKLCH. Use: L, C, H (e.g. 0.726, 0.129, 253.06)"
+                            )
             else:
                 st.caption(
                     "OKLCH needs the **colour** package. It only works if installed for the **same Python that runs Streamlit** "
@@ -612,6 +688,9 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
 
         # --- Actions ---
         st.subheader("Generate")
+        if st.button("Update Preview", type="secondary"):
+            st.session_state.live_preview_needs_update = True
+
         add_border = st.checkbox(
             "Add border (uses theme text color)",
             value=True,
@@ -627,15 +706,12 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
         create_map_poster.THEME.clear()
         create_map_poster.THEME.update(theme)
 
-        # Live preset map: regenerate when theme colors or layer visibility change
-        current_theme_key = (
-            tuple(sorted(st.session_state.theme_colors.items())),
-            show_water, show_parks, show_roads, show_gradient, show_labels,
-            clear_background,
-        )
-        if current_theme_key != st.session_state.get("last_live_preview_theme"):
+        # Live preset map: regenerate when button is pressed
+        if st.session_state.get("live_preview_needs_update", False):
             try:
-                coords = create_map_poster.get_coordinates(LIVE_PRESET_CITY, LIVE_PRESET_COUNTRY)
+                coords = create_map_poster.get_coordinates(
+                    LIVE_PRESET_CITY, LIVE_PRESET_COUNTRY
+                )
                 with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
                     tmp_path = tmp.name
                 with st.spinner("Updating live preview..."):
@@ -659,22 +735,25 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                         clear_background=clear_background,
                     )
                 if add_border:
-                    create_map_poster.add_border_to_image(tmp_path, theme["text"], border_px=20)
+                    create_map_poster.add_border_to_image(
+                        tmp_path, theme["text"], border_px=20
+                    )
                 with open(tmp_path, "rb") as f:
                     st.session_state.live_preview_image = f.read()
                 os.unlink(tmp_path)
-                st.session_state.last_live_preview_theme = current_theme_key
+                st.session_state.live_preview_needs_update = False
                 st.session_state.live_preview_error = None
             except Exception as e:
                 st.session_state.live_preview_error = str(e)
-                # Don't set last_live_preview_theme so we retry on next rerun
 
         if st.button("Generate preview", type="primary"):
             preview_dist = int(distance * 0.5)
             preview_w = chosen_w * 0.5
             preview_h = chosen_h * 0.5
             try:
-                coords = coords_override or create_map_poster.get_coordinates(city, country)
+                coords = coords_override or create_map_poster.get_coordinates(
+                    city, country
+                )
                 with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
                     tmp_path = tmp.name
                 with st.spinner("Generating..."):
@@ -701,19 +780,25 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                         clear_background=clear_background,
                     )
                 if add_border:
-                    create_map_poster.add_border_to_image(tmp_path, theme["text"], border_px=20)
+                    create_map_poster.add_border_to_image(
+                        tmp_path, theme["text"], border_px=20
+                    )
                 with open(tmp_path, "rb") as f:
                     st.session_state.generated_image = f.read()
                 st.session_state.generated_caption = f"Preview · {city}, {country}"
                 city_slug = city.lower().replace(" ", "_")
-                st.session_state.generated_filename = f"preview_{city_slug}_{country.lower().replace(' ', '_')}.png"
+                st.session_state.generated_filename = (
+                    f"preview_{city_slug}_{country.lower().replace(' ', '_')}.png"
+                )
                 os.unlink(tmp_path)
             except Exception as e:
                 st.error(str(e))
 
         if st.button("Generate full poster"):
             try:
-                coords = coords_override or create_map_poster.get_coordinates(city, country)
+                coords = coords_override or create_map_poster.get_coordinates(
+                    city, country
+                )
                 output_file = create_map_poster.generate_output_filename(
                     city, "custom", "png", subdir="streamlit"
                 )
@@ -741,7 +826,9 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                         clear_background=clear_background,
                     )
                 if add_border:
-                    full_border_px = int(20 * (chosen_h / 6.0))  # scale to match 6in preview
+                    full_border_px = int(
+                        20 * (chosen_h / 6.0)
+                    )  # scale to match 6in preview
                     create_map_poster.add_border_to_image(
                         output_file, theme["text"], border_px=full_border_px
                     )
@@ -752,17 +839,29 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
             except Exception as e:
                 st.error(str(e))
 
-        if st.button("Generate all themes", help="Generate one poster per theme for current city (saves to posters/streamlit_all/)"):
+        if st.button(
+            "Generate all themes",
+            help="Generate one poster per theme for current city (saves to posters/streamlit_all/)",
+        ):
             themes_to_generate = [t for t in available if t != "From scratch"]
             if not themes_to_generate:
-                st.warning("No themes to generate. Add themes or create from scratch first.")
+                st.warning(
+                    "No themes to generate. Add themes or create from scratch first."
+                )
             else:
                 try:
-                    coords = coords_override or create_map_poster.get_coordinates(city, country)
-                    progress = st.progress(0.0, text=f"Generating 0/{len(themes_to_generate)}...")
+                    coords = coords_override or create_map_poster.get_coordinates(
+                        city, country
+                    )
+                    progress = st.progress(
+                        0.0, text=f"Generating 0/{len(themes_to_generate)}..."
+                    )
                     generated = []
                     for i, theme_id in enumerate(themes_to_generate):
-                        progress.progress((i + 1) / len(themes_to_generate), text=f"Generating {i + 1}/{len(themes_to_generate)}: {theme_id}...")
+                        progress.progress(
+                            (i + 1) / len(themes_to_generate),
+                            text=f"Generating {i + 1}/{len(themes_to_generate)}: {theme_id}...",
+                        )
                         th = create_map_poster.load_theme(theme_id)
                         create_map_poster.THEME.clear()
                         create_map_poster.THEME.update(th)
@@ -793,17 +892,25 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                         )
                         if add_border:
                             full_border_px = int(20 * (chosen_h / 6.0))
-                            create_map_poster.add_border_to_image(output_file, th["text"], border_px=full_border_px)
+                            create_map_poster.add_border_to_image(
+                                output_file, th["text"], border_px=full_border_px
+                            )
                         generated.append(output_file)
                     # Restore current theme for UI
                     create_map_poster.THEME.clear()
                     create_map_poster.THEME.update(theme)
                     progress.empty()
-                    st.success(f"Generated {len(generated)} posters in posters/streamlit_all/")
+                    st.success(
+                        f"Generated {len(generated)} posters in posters/streamlit_all/"
+                    )
                     with open(generated[-1], "rb") as f:
                         st.session_state.generated_image = f.read()
-                    st.session_state.generated_caption = f"Last of {len(generated)}: {os.path.basename(generated[-1])}"
-                    st.session_state.generated_filename = os.path.basename(generated[-1])
+                    st.session_state.generated_caption = (
+                        f"Last of {len(generated)}: {os.path.basename(generated[-1])}"
+                    )
+                    st.session_state.generated_filename = os.path.basename(
+                        generated[-1]
+                    )
                 except Exception as e:
                     st.error(str(e))
 
@@ -814,9 +921,13 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
         except (Exception, FileNotFoundError):
             has_token = bool(os.environ.get("GITHUB_TOKEN", ""))
         if not has_token:
-            st.caption("💡 Add **GITHUB_TOKEN** to Streamlit secrets (Manage app → Settings) to save themes forever on Cloud.")
+            st.caption(
+                "💡 Add **GITHUB_TOKEN** to Streamlit secrets (Manage app → Settings) to save themes forever on Cloud."
+            )
         if selected_theme != "From scratch":
-            if st.button("Update current theme", type="primary", key="update_theme_btn"):
+            if st.button(
+                "Update current theme", type="primary", key="update_theme_btn"
+            ):
                 full_theme = build_full_theme(
                     st.session_state.theme_colors,
                     name=selected_theme.replace("_", " ").title(),
@@ -824,7 +935,9 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                 )
                 ok, msg = _save_theme_to_github(full_theme, selected_theme)
                 if ok:
-                    st.success(f"Updated **{selected_theme.replace('_', ' ').title()}** — {msg}")
+                    st.success(
+                        f"Updated **{selected_theme.replace('_', ' ').title()}** — {msg}"
+                    )
                     try:
                         save_theme_to_file(full_theme, selected_theme)
                     except OSError:
@@ -833,12 +946,16 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                 else:
                     try:
                         path = save_theme_to_file(full_theme, selected_theme)
-                        st.success(f"Updated **{selected_theme.replace('_', ' ').title()}** (local: {path})")
+                        st.success(
+                            f"Updated **{selected_theme.replace('_', ' ').title()}** (local: {path})"
+                        )
                         st.rerun()
                     except Exception as e:
                         st.error(f"Update failed: {e}. {msg}" if msg else str(e))
             st.caption("Or save as a new palette below.")
-        theme_name = st.text_input("Save as new palette", value="my_theme", key="save_name")
+        theme_name = st.text_input(
+            "Save as new palette", value="my_theme", key="save_name"
+        )
         if st.button("Save as new"):
             theme_name = theme_name.strip().replace(" ", "_") or "my_theme"
             full_theme = build_full_theme(
@@ -863,7 +980,11 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                     st.error(f"Save failed: {e}. {msg}" if msg else str(e))
 
         # Export current palette as JSON — add to themes/ and commit so it persists on Streamlit Cloud
-        export_name = st.text_input("Export for git (persists across deploys)", value=selected_theme if selected_theme != "From scratch" else "my_theme", key="export_name")
+        export_name = st.text_input(
+            "Export for git (persists across deploys)",
+            value=selected_theme if selected_theme != "From scratch" else "my_theme",
+            key="export_name",
+        )
         export_theme = build_full_theme(
             st.session_state.theme_colors,
             name=export_name.replace("_", " ").title(),
@@ -880,39 +1001,45 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
         )
 
 with col_right:
-    with st.container(height=960):  # Taller so poster fits above the fold without scrolling
+    with st.container(
+        height=960
+    ):  # Taller so poster fits above the fold without scrolling
         # Compact header: single line to leave more room for poster
         live_img = st.session_state.live_preview_image
         gen_img = st.session_state.generated_image
 
         if live_img and gen_img:
             # A/B comparison: Live vs Generated side by side (native Streamlit)
-            st.caption(f"**Preview** · Live: {LIVE_PRESET_CITY}, {LIVE_PRESET_COUNTRY} ({LIVE_PRESET_DIST//1000} km)")
+            st.caption(
+                f"**Preview** · Live: {LIVE_PRESET_CITY}, {LIVE_PRESET_COUNTRY} ({LIVE_PRESET_DIST // 1000} km)"
+            )
             col_a, col_b = st.columns(2)
             with col_a:
                 st.caption("**Live**")
-                st.image(live_img, width='stretch')
+                st.image(live_img, width="stretch")
             with col_b:
                 st.caption("**Generated**")
-                st.image(gen_img, width='stretch')
+                st.image(gen_img, width="stretch")
         elif live_img:
-            st.caption(f"**Preview** · Live: {LIVE_PRESET_CITY}, {LIVE_PRESET_COUNTRY} ({LIVE_PRESET_DIST//1000} km)")
-            st.image(live_img, width='stretch')
+            st.caption(
+                f"**Preview** · Live: {LIVE_PRESET_CITY}, {LIVE_PRESET_COUNTRY} ({LIVE_PRESET_DIST // 1000} km)"
+            )
+            st.image(live_img, width="stretch")
         elif gen_img:
             st.caption("**Preview** · Last generated")
             st.image(
                 gen_img,
                 caption=st.session_state.generated_caption,
-                width='stretch',
+                width="stretch",
             )
         elif st.session_state.get("live_preview_error"):
             st.error("Live preview failed: " + st.session_state.live_preview_error)
             if st.button("Retry live preview", key="retry_live"):
                 st.session_state.live_preview_error = None
-                st.session_state.last_live_preview_theme = None
+                st.session_state.live_preview_needs_update = True
                 st.rerun()
         else:
-            st.info("Loading live preview… (preset map will update as you change colors)")
+            st.info("Click 'Update Preview' to generate preview")
 
         if gen_img:
             st.download_button(
