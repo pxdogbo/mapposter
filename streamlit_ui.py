@@ -304,6 +304,52 @@ def _save_theme_to_github(theme: dict, filename: str) -> tuple[bool, str]:
     return False, resp.json().get("message", resp.text)
 
 
+def _delete_theme_from_github(filename: str) -> tuple[bool, str]:
+    """
+    Delete theme file from GitHub repo via API. Returns (success, message).
+    """
+    try:
+        token = st.secrets.get("GITHUB_TOKEN")
+    except Exception:
+        token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        return False, "GITHUB_TOKEN not configured"
+
+    repo = "pxdogbo/mapposter"
+    try:
+        repo = st.secrets.get("GITHUB_REPO", repo)
+    except Exception:
+        repo = os.environ.get("GITHUB_REPO", repo)
+
+    path = f"themes/{filename}.json"
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    url = f"https://api.github.com/repos/{repo}/contents/{path}"
+
+    # Get file SHA (required for deletion)
+    r = requests.get(url, headers=headers, timeout=10)
+    if r.status_code != 200:
+        return False, f"Theme not found on GitHub"
+
+    sha = r.json().get("sha")
+    if not sha:
+        return False, "Could not get file SHA"
+
+    payload = {
+        "message": f"Delete theme: {filename}",
+        "sha": sha,
+    }
+
+    resp = requests.delete(url, headers=headers, json=payload, timeout=15)
+    if resp.status_code == 200:
+        return True, f"Deleted from GitHub (themes/{filename}.json)"
+    return False, resp.json().get("message", resp.text)
+
+
 def _load_hidden_themes() -> list[str]:
     """Load list of theme IDs to hide (persists across deploys when committed)."""
     if not HIDDEN_THEMES_FILE.exists():
@@ -322,21 +368,32 @@ def _save_hidden_themes(hidden: list[str]) -> None:
         json.dump(hidden, f, indent=2)
 
 
-def delete_theme_from_file(theme_id: str) -> bool:
-    """Delete theme: add to hidden list (persists when pushed) and remove file. Returns True if deleted."""
+def delete_theme_from_file(theme_id: str) -> tuple[bool, str]:
+    """
+    Delete theme: remove from GitHub, add to hidden list, and remove local file.
+    Returns (success, message).
+    """
     if not theme_id or theme_id == "From scratch":
-        return False
-    # Add to hidden list first (committed file = deletions persist on Streamlit Cloud / redeploys)
+        return False, "Cannot delete default theme"
+
+    # Try to delete from GitHub first
+    ok, msg = _delete_theme_from_github(theme_id)
+    if not ok:
+        # Try local delete anyway - may work if running locally without GitHub
+        pass
+
+    # Add to hidden list
     hidden = _load_hidden_themes()
     if theme_id not in hidden:
         hidden.append(theme_id)
         _save_hidden_themes(hidden)
+
     # Remove the theme file from disk
     path = THEMES_DIR / f"{theme_id}.json"
     if path.exists():
         path.unlink()
-        return True
-    return True  # Consider it deleted if already in hidden list
+
+    return True, f"Deleted theme: {theme_id}"
 
 
 st.set_page_config(page_title="Map Poster Theme Editor", layout="wide")
@@ -531,10 +588,14 @@ with col_left:
                             help=f"Delete {display_name}",
                             width="stretch",
                         ):
-                            if delete_theme_from_file(theme_id):
+                            ok, msg = delete_theme_from_file(theme_id)
+                            if ok:
                                 if st.session_state.get("theme_select") == theme_id:
                                     st.session_state["theme_select"] = "From scratch"
-                                st.rerun()
+                                st.success(msg)
+                            else:
+                                st.error(msg)
+                            st.rerun()
 
         selected_theme = st.session_state.get("theme_select", available[0])
         if selected_theme not in available:
