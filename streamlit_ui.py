@@ -615,6 +615,12 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
             value=True,
             key="add_border",
         )
+        clear_background = st.checkbox(
+            "Clear background (transparent PNG)",
+            value=False,
+            key="clear_background",
+            help="Use transparent background instead of theme color; useful for overlays",
+        )
         theme = build_full_theme(st.session_state.theme_colors)
         create_map_poster.THEME.clear()
         create_map_poster.THEME.update(theme)
@@ -623,6 +629,7 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
         current_theme_key = (
             tuple(sorted(st.session_state.theme_colors.items())),
             show_water, show_parks, show_roads, show_gradient, show_labels,
+            clear_background,
         )
         if current_theme_key != st.session_state.get("last_live_preview_theme"):
             try:
@@ -647,6 +654,7 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                         show_roads=show_roads,
                         show_gradient=show_gradient,
                         show_labels=show_labels,
+                        clear_background=clear_background,
                     )
                 if add_border:
                     create_map_poster.add_border_to_image(tmp_path, theme["text"], border_px=20)
@@ -687,6 +695,7 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                         country_label=country_label_override,
                         display_city=display_city_override,
                         display_country=display_country_override,
+                        clear_background=clear_background,
                     )
                 if add_border:
                     create_map_poster.add_border_to_image(tmp_path, theme["text"], border_px=20)
@@ -726,6 +735,7 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                         country_label=country_label_override,
                         display_city=display_city_override,
                         display_country=display_country_override,
+                        clear_background=clear_background,
                     )
                 if add_border:
                     full_border_px = int(20 * (chosen_h / 6.0))  # scale to match 6in preview
@@ -776,6 +786,7 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                             country_label=country_label_override,
                             display_city=display_city_override,
                             display_country=display_country_override,
+                            clear_background=clear_background,
                         )
                         if add_border:
                             full_border_px = int(20 * (chosen_h / 6.0))

@@ -568,6 +568,7 @@ def create_poster(
     show_roads=True,
     show_gradient=True,
     show_labels=True,
+    clear_background=False,
 ):
     """
     Generate a complete map poster with roads, water, parks, and typography.
@@ -592,6 +593,7 @@ def create_poster(
         show_roads: Whether to display the street network (default: True)
         show_gradient: Whether to display top/bottom gradient fades (default: True)
         show_labels: Whether to display city, country, and coordinates (default: True)
+        clear_background: Whether to use a transparent background instead of theme bg (default: False)
 
     Raises:
         RuntimeError: If street network data cannot be retrieved
@@ -647,8 +649,9 @@ def create_poster(
 
     # 2. Setup Plot
     print("Rendering map...")
-    fig, ax = plt.subplots(figsize=(width, height), facecolor=THEME["bg"])
-    ax.set_facecolor(THEME["bg"])
+    bg_color = "none" if clear_background else THEME["bg"]
+    fig, ax = plt.subplots(figsize=(width, height), facecolor=bg_color)
+    ax.set_facecolor(bg_color)
     ax.set_position((0.0, 0.0, 1.0, 1.0))
 
     # Project graph to a metric CRS so distances and aspect are linear (meters)
@@ -707,7 +710,7 @@ def create_poster(
         edge_colors = get_edge_colors_by_type(g_proj)
         edge_widths = get_edge_widths_by_type(g_proj)
         ox.plot_graph(
-            g_proj, ax=ax, bgcolor=THEME['bg'],
+            g_proj, ax=ax, bgcolor=bg_color,
             node_size=0,
             edge_color=edge_colors,
             edge_linewidth=edge_widths,
@@ -884,10 +887,12 @@ def create_poster(
 
     fmt = output_format.lower()
     save_kwargs = dict(
-        facecolor=THEME["bg"],
+        facecolor=bg_color,
         bbox_inches="tight",
         pad_inches=pad_inches,
     )
+    if clear_background:
+        save_kwargs["transparent"] = True
 
     # DPI matters mainly for raster formats
     if fmt == "png":
