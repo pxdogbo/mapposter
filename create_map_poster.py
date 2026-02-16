@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import cast
 
 import matplotlib
+
 matplotlib.use("Agg")  # Headless backend required for Streamlit Cloud
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
@@ -37,6 +38,7 @@ from font_management import load_fonts
 
 try:
     from PIL import Image
+
     HAS_PIL = True
 except ImportError:
     HAS_PIL = False
@@ -226,9 +228,17 @@ def add_border_to_image(filepath: str, hex_color: str, border_px: int = 80) -> N
         return
     hex_color = hex_color.lstrip("#")
     r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
-    img = Image.open(filepath).convert("RGB")
+    img = Image.open(filepath)
+    has_alpha = img.mode == "RGBA"
+    if has_alpha:
+        img = img.convert("RGBA")
+    else:
+        img = img.convert("RGB")
     w, h = img.size
-    out = Image.new("RGB", (w + 2 * border_px, h + 2 * border_px), (r, g, b))
+    if has_alpha:
+        out = Image.new("RGBA", (w + 2 * border_px, h + 2 * border_px), (r, g, b, 255))
+    else:
+        out = Image.new("RGB", (w + 2 * border_px, h + 2 * border_px), (r, g, b))
     out.paste(img, (border_px, border_px))
     out.save(filepath, "PNG")
 
@@ -287,11 +297,11 @@ def get_edge_colors_by_type(g):
 
     for _u, _v, data in g.edges(data=True):
         # Get the highway type (can be a list or string)
-        highway = data.get('highway', 'unclassified')
+        highway = data.get("highway", "unclassified")
 
         # Handle list of highway types (take the first one)
         if isinstance(highway, list):
-            highway = highway[0] if highway else 'unclassified'
+            highway = highway[0] if highway else "unclassified"
 
         # Assign color based on road type
         if highway in ["motorway", "motorway_link"]:
@@ -305,7 +315,7 @@ def get_edge_colors_by_type(g):
         elif highway in ["residential", "living_street", "unclassified"]:
             color = THEME["road_residential"]
         else:
-            color = THEME['road_default']
+            color = THEME["road_default"]
 
         edge_colors.append(color)
 
@@ -320,10 +330,10 @@ def get_edge_widths_by_type(g):
     edge_widths = []
 
     for _u, _v, data in g.edges(data=True):
-        highway = data.get('highway', 'unclassified')
+        highway = data.get("highway", "unclassified")
 
         if isinstance(highway, list):
-            highway = highway[0] if highway else 'unclassified'
+            highway = highway[0] if highway else "unclassified"
 
         # Assign width based on road importance
         if highway in ["motorway", "motorway_link"]:
@@ -404,13 +414,9 @@ def get_crop_limits(g_proj, center_lat_lon, fig, dist):
     lat, lon = center_lat_lon
 
     # Project center point into graph CRS
-    center = (
-        ox.projection.project_geometry(
-            Point(lon, lat),
-            crs="EPSG:4326",
-            to_crs=g_proj.graph["crs"]
-        )[0]
-    )
+    center = ox.projection.project_geometry(
+        Point(lon, lat), crs="EPSG:4326", to_crs=g_proj.graph["crs"]
+    )[0]
     center_x, center_y = center.x, center.y
 
     fig_width, fig_height = fig.get_size_inches()
@@ -443,9 +449,15 @@ def _draw_city_name_letter_spaced(
     except Exception:
         # Fallback: draw as single text if no renderer (e.g. some backends)
         ax.text(
-            0.5, y_axes, city_str,
-            transform=ax.transAxes, color=color, ha="center", va="center",
-            fontproperties=fontproperties, zorder=zorder,
+            0.5,
+            y_axes,
+            city_str,
+            transform=ax.transAxes,
+            color=color,
+            ha="center",
+            va="center",
+            fontproperties=fontproperties,
+            zorder=zorder,
         )
         return
     # Axes width in figure pixels (for horizontal conversion)
@@ -462,14 +474,22 @@ def _draw_city_name_letter_spaced(
         t.remove()
         char_widths_axes.append(ext.width * pixel_to_axes)
 
-    total_width_axes = sum(char_widths_axes) + (len(city_str) - 1) * gap_axes if city_str else 0
+    total_width_axes = (
+        sum(char_widths_axes) + (len(city_str) - 1) * gap_axes if city_str else 0
+    )
     x = 0.5 - total_width_axes / 2.0
 
     for c, cw in zip(city_str, char_widths_axes):
         ax.text(
-            x, y_axes, c,
-            transform=ax.transAxes, color=color, ha="left", va="center",
-            fontproperties=fontproperties, zorder=zorder,
+            x,
+            y_axes,
+            c,
+            transform=ax.transAxes,
+            color=color,
+            ha="left",
+            va="center",
+            fontproperties=fontproperties,
+            zorder=zorder,
         )
         x += cw + gap_axes
 
@@ -496,7 +516,13 @@ def fetch_graph(point, dist) -> MultiDiGraph | None:
         return cast(MultiDiGraph, cached)
 
     try:
-        g = ox.graph_from_point(point, dist=dist, dist_type='bbox', network_type='all', truncate_by_edge=True)
+        g = ox.graph_from_point(
+            point,
+            dist=dist,
+            dist_type="bbox",
+            network_type="all",
+            truncate_by_edge=True,
+        )
         # Rate limit between requests
         time.sleep(0.5)
         try:
@@ -604,7 +630,9 @@ def create_poster(
     display_country = display_country or country_label or country
 
     print(f"\nGenerating map for {city}, {country}...")
-    compensated_dist = dist * (max(height, width) / min(height, width)) / 4  # To compensate for viewport crop
+    compensated_dist = (
+        dist * (max(height, width) / min(height, width)) / 4
+    )  # To compensate for viewport crop
 
     # Progress bar for data fetching (graph always, water/parks only if shown)
     fetch_steps = 1 + (1 if show_water else 0) + (1 if show_parks else 0)
@@ -667,13 +695,23 @@ def create_poster(
             try:
                 water_polys = ox.projection.project_gdf(water_polys)
             except Exception:
-                water_polys = water_polys.to_crs(g_proj.graph['crs'])
+                water_polys = water_polys.to_crs(g_proj.graph["crs"])
             # Optional gradient: darker base + subtle glow (theme keys "water" = glow, "water_dark" = base)
             if THEME.get("water_dark"):
-                water_polys.plot(ax=ax, facecolor=THEME["water_dark"], edgecolor="none", zorder=0.5)
-                water_polys.plot(ax=ax, facecolor=THEME["water"], edgecolor="none", zorder=0.52, alpha=0.45)
+                water_polys.plot(
+                    ax=ax, facecolor=THEME["water_dark"], edgecolor="none", zorder=0.5
+                )
+                water_polys.plot(
+                    ax=ax,
+                    facecolor=THEME["water"],
+                    edgecolor="none",
+                    zorder=0.52,
+                    alpha=0.45,
+                )
             else:
-                water_polys.plot(ax=ax, facecolor=THEME["water"], edgecolor="none", zorder=0.5)
+                water_polys.plot(
+                    ax=ax, facecolor=THEME["water"], edgecolor="none", zorder=0.5
+                )
 
     parks_polys = None
     if show_parks and parks is not None and not parks.empty:
@@ -684,7 +722,7 @@ def create_poster(
             try:
                 parks_polys = ox.projection.project_gdf(parks_polys)
             except Exception:
-                parks_polys = parks_polys.to_crs(g_proj.graph['crs'])
+                parks_polys = parks_polys.to_crs(g_proj.graph["crs"])
             # Fill at 60% opacity, then border at 30% (separate draws for different alphas)
             parks_polys.plot(
                 ax=ax,
@@ -710,7 +748,9 @@ def create_poster(
         edge_colors = get_edge_colors_by_type(g_proj)
         edge_widths = get_edge_widths_by_type(g_proj)
         ox.plot_graph(
-            g_proj, ax=ax, bgcolor=bg_color,
+            g_proj,
+            ax=ax,
+            bgcolor=bg_color,
             node_size=0,
             edge_color=edge_colors,
             edge_linewidth=edge_widths,
@@ -723,8 +763,8 @@ def create_poster(
 
     # Layer 3: Gradients (Top and Bottom)
     if show_gradient:
-        create_gradient_fade(ax, THEME['gradient_color'], location='bottom', zorder=10)
-        create_gradient_fade(ax, THEME['gradient_color'], location='top', zorder=10)
+        create_gradient_fade(ax, THEME["gradient_color"], location="bottom", zorder=10)
+        create_gradient_fade(ax, THEME["gradient_color"], location="top", zorder=10)
 
     # Layer 3b: Parks again on top of gradient (fill 60%, border 30% opacity)
     if parks_polys is not None and not parks_polys.empty:
@@ -783,7 +823,9 @@ def create_poster(
         city_display_str = display_city.upper()
         use_pixel_spacing = isinstance(letter_spacing, (int, float))
         if use_pixel_spacing:
-            spaced_city = city_display_str  # will be drawn by _draw_city_name_letter_spaced
+            spaced_city = (
+                city_display_str  # will be drawn by _draw_city_name_letter_spaced
+            )
         elif letter_spacing == "normal" or letter_spacing == "":
             spaced_city = city_display_str
         elif letter_spacing:
@@ -824,7 +866,9 @@ def create_poster(
     row_gap_px = 50 * (height / 6.0)
     row_gap = row_gap_px * px_to_axes  # between city, line, country, coords
     y_top_block = 0.14
-    y_city = y_top_block - 0.01  # city name slightly lower than block; country/coords stay put
+    y_city = (
+        y_top_block - 0.01
+    )  # city name slightly lower than block; country/coords stay put
     y_line = y_top_block - row_gap
     y_country = y_line - row_gap
     y_coords = y_country - row_gap
@@ -832,8 +876,14 @@ def create_poster(
     if show_labels:
         if use_pixel_spacing and isinstance(letter_spacing, (int, float)):
             _draw_city_name_letter_spaced(
-                fig, ax, y_city, city_display_str,
-                font_main_adjusted, THEME["text"], int(letter_spacing), zorder=11,
+                fig,
+                ax,
+                y_city,
+                city_display_str,
+                font_main_adjusted,
+                THEME["text"],
+                int(letter_spacing),
+                zorder=11,
             )
         else:
             ax.text(
@@ -977,8 +1027,8 @@ def list_themes():
         try:
             with open(theme_path, "r", encoding=FILE_ENCODING) as f:
                 theme_data = json.load(f)
-                display_name = theme_data.get('name', theme_name)
-                description = theme_data.get('description', '')
+                display_name = theme_data.get("name", theme_name)
+                description = theme_data.get("description", "")
         except (OSError, json.JSONDecodeError):
             display_name = theme_name
             description = ""
@@ -1138,6 +1188,7 @@ Examples:
     # Print Replicate model schema if requested
     if args.replicate_schema:
         from replicate_style import print_model_schema
+
         print_model_schema(args.replicate_model)
         sys.exit(0)
 
@@ -1225,10 +1276,15 @@ Examples:
             # Replicate AI styling (PNG only)
             if args.replicate and args.format == "png":
                 from replicate_style import style_with_replicate
+
                 stem = str(Path(output_file).stem)
                 parent = Path(output_file).parent
                 bordered_candidate = parent / f"{stem}_bordered.png"
-                source = str(bordered_candidate) if bordered_candidate.exists() else output_file
+                source = (
+                    str(bordered_candidate)
+                    if bordered_candidate.exists()
+                    else output_file
+                )
                 style_with_replicate(
                     source,
                     model_id=args.replicate_model,
