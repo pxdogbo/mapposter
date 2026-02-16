@@ -563,6 +563,11 @@ def create_poster(
     fonts=None,
     pad_inches=0.05,
     letter_spacing=None,
+    show_water=True,
+    show_parks=True,
+    show_roads=True,
+    show_gradient=True,
+    show_labels=True,
 ):
     """
     Generate a complete map poster with roads, water, parks, and typography.
@@ -582,6 +587,11 @@ def create_poster(
         country_label: Optional override for country text on poster
         _name_label: Optional override for city name (unused, reserved for future use)
         letter_spacing: If "normal" or "", use font kerning (no manual spacing). If a string (e.g. "  "), use it between letters. If None, use double-space between letters for Latin city names.
+        show_water: Whether to fetch and display water bodies (default: True)
+        show_parks: Whether to fetch and display parks/green spaces (default: True)
+        show_roads: Whether to display the street network (default: True)
+        show_gradient: Whether to display top/bottom gradient fades (default: True)
+        show_labels: Whether to display city, country, and coordinates (default: True)
 
     Raises:
         RuntimeError: If street network data cannot be retrieved
@@ -592,41 +602,46 @@ def create_poster(
     display_country = display_country or country_label or country
 
     print(f"\nGenerating map for {city}, {country}...")
+    compensated_dist = dist * (max(height, width) / min(height, width)) / 4  # To compensate for viewport crop
 
-    # Progress bar for data fetching
+    # Progress bar for data fetching (graph always, water/parks only if shown)
+    fetch_steps = 1 + (1 if show_water else 0) + (1 if show_parks else 0)
     with tqdm(
-        total=3,
+        total=fetch_steps,
         desc="Fetching map data",
         unit="step",
         bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt}",
     ) as pbar:
-        # 1. Fetch Street Network
+        # 1. Fetch Street Network (always needed for extent/crop)
         pbar.set_description("Downloading street network")
-        compensated_dist = dist * (max(height, width) / min(height, width)) / 4  # To compensate for viewport crop
         g = fetch_graph(point, compensated_dist)
         if g is None:
             raise RuntimeError("Failed to retrieve street network data.")
         pbar.update(1)
 
-        # 2. Fetch Water Features
-        pbar.set_description("Downloading water features")
-        water = fetch_features(
-            point,
-            compensated_dist,
-            tags={"natural": ["water", "bay", "strait"], "waterway": "riverbank"},
-            name="water",
-        )
-        pbar.update(1)
+        # 2. Fetch Water Features (only if showing)
+        water = None
+        if show_water:
+            pbar.set_description("Downloading water features")
+            water = fetch_features(
+                point,
+                compensated_dist,
+                tags={"natural": ["water", "bay", "strait"], "waterway": "riverbank"},
+                name="water",
+            )
+            pbar.update(1)
 
-        # 3. Fetch Parks
-        pbar.set_description("Downloading parks/green spaces")
-        parks = fetch_features(
-            point,
-            compensated_dist,
-            tags={"leisure": "park", "landuse": "grass"},
-            name="parks",
-        )
-        pbar.update(1)
+        # 3. Fetch Parks (only if showing)
+        parks = None
+        if show_parks:
+            pbar.set_description("Downloading parks/green spaces")
+            parks = fetch_features(
+                point,
+                compensated_dist,
+                tags={"leisure": "park", "landuse": "grass"},
+                name="parks",
+            )
+            pbar.update(1)
 
     print("✓ All data retrieved successfully!")
 
@@ -640,8 +655,8 @@ def create_poster(
     g_proj = ox.project_graph(g)
 
     # 3. Plot Layers
-    # Layer 1: Polygons (filter to only plot polygon/multipolygon geometries, not points)
-    if water is not None and not water.empty:
+    # Layer 1: Water (filter to only plot polygon/multipolygon geometries, not points)
+    if show_water and water is not None and not water.empty:
         # Filter to only polygon/multipolygon geometries to avoid point features showing as dots
         water_polys = water[water.geometry.type.isin(["Polygon", "MultiPolygon"])]
         if not water_polys.empty:
@@ -658,7 +673,7 @@ def create_poster(
                 water_polys.plot(ax=ax, facecolor=THEME["water"], edgecolor="none", zorder=0.5)
 
     parks_polys = None
-    if parks is not None and not parks.empty:
+    if show_parks and parks is not None and not parks.empty:
         # Filter to only polygon/multipolygon geometries to avoid point features showing as dots
         parks_polys = parks[parks.geometry.type.isin(["Polygon", "MultiPolygon"])]
         if not parks_polys.empty:
@@ -684,28 +699,29 @@ def create_poster(
                 alpha=0.3,
             )
     # Layer 2: Roads with hierarchy coloring
-    print("Applying road hierarchy colors...")
-    edge_colors = get_edge_colors_by_type(g_proj)
-    edge_widths = get_edge_widths_by_type(g_proj)
-
     # Determine cropping limits to maintain the poster aspect ratio
     crop_xlim, crop_ylim = get_crop_limits(g_proj, point, fig, compensated_dist)
-    # Plot the projected graph and then apply the cropped limits
-    ox.plot_graph(
-        g_proj, ax=ax, bgcolor=THEME['bg'],
-        node_size=0,
-        edge_color=edge_colors,
-        edge_linewidth=edge_widths,
-        show=False,
-        close=False,
-    )
+
+    if show_roads:
+        print("Applying road hierarchy colors...")
+        edge_colors = get_edge_colors_by_type(g_proj)
+        edge_widths = get_edge_widths_by_type(g_proj)
+        ox.plot_graph(
+            g_proj, ax=ax, bgcolor=THEME['bg'],
+            node_size=0,
+            edge_color=edge_colors,
+            edge_linewidth=edge_widths,
+            show=False,
+            close=False,
+        )
     ax.set_aspect("equal", adjustable="box")
     ax.set_xlim(crop_xlim)
     ax.set_ylim(crop_ylim)
 
     # Layer 3: Gradients (Top and Bottom)
-    create_gradient_fade(ax, THEME['gradient_color'], location='bottom', zorder=10)
-    create_gradient_fade(ax, THEME['gradient_color'], location='top', zorder=10)
+    if show_gradient:
+        create_gradient_fade(ax, THEME['gradient_color'], location='bottom', zorder=10)
+        create_gradient_fade(ax, THEME['gradient_color'], location='top', zorder=10)
 
     # Layer 3b: Parks again on top of gradient (fill 60%, border 30% opacity)
     if parks_polys is not None and not parks_polys.empty:
@@ -810,57 +826,58 @@ def create_poster(
     y_country = y_line - row_gap
     y_coords = y_country - row_gap
 
-    if use_pixel_spacing and isinstance(letter_spacing, (int, float)):
-        _draw_city_name_letter_spaced(
-            fig, ax, y_city, city_display_str,
-            font_main_adjusted, THEME["text"], int(letter_spacing), zorder=11,
-        )
-    else:
+    if show_labels:
+        if use_pixel_spacing and isinstance(letter_spacing, (int, float)):
+            _draw_city_name_letter_spaced(
+                fig, ax, y_city, city_display_str,
+                font_main_adjusted, THEME["text"], int(letter_spacing), zorder=11,
+            )
+        else:
+            ax.text(
+                0.5,
+                y_city,
+                spaced_city,
+                transform=ax.transAxes,
+                color=THEME["text"],
+                ha="center",
+                va="center",
+                fontproperties=font_main_adjusted,
+                zorder=11,
+            )
+
         ax.text(
             0.5,
-            y_city,
-            spaced_city,
+            y_country,
+            display_country.upper(),
             transform=ax.transAxes,
             color=THEME["text"],
             ha="center",
             va="center",
-            fontproperties=font_main_adjusted,
+            fontproperties=font_sub,
             zorder=11,
         )
 
-    ax.text(
-        0.5,
-        y_country,
-        display_country.upper(),
-        transform=ax.transAxes,
-        color=THEME["text"],
-        ha="center",
-        va="center",
-        fontproperties=font_sub,
-        zorder=11,
-    )
+        lat, lon = point
+        coords = (
+            f"{lat:.4f}° N / {lon:.4f}° E"
+            if lat >= 0
+            else f"{abs(lat):.4f}° S / {lon:.4f}° E"
+        )
+        if lon < 0:
+            coords = coords.replace("E", "W")
 
-    lat, lon = point
-    coords = (
-        f"{lat:.4f}° N / {lon:.4f}° E"
-        if lat >= 0
-        else f"{abs(lat):.4f}° S / {lon:.4f}° E"
-    )
-    if lon < 0:
-        coords = coords.replace("E", "W")
-
-    ax.text(
-        0.5,
-        y_coords,
-        coords,
-        transform=ax.transAxes,
-        color=THEME["text"],
-        alpha=0.7,
-        ha="center",
-        va="center",
-        fontproperties=font_coords,
-        zorder=11,
-    )
+        ax.text(
+            0.5,
+            y_coords,
+            coords,
+            transform=ax.transAxes,
+            color=THEME["text"],
+            alpha=0.7,
+            ha="center",
+            va="center",
+            fontproperties=font_coords,
+            zorder=11,
+        )
 
     # 5. Save
     print(f"Saving to {output_file}...")

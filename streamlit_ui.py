@@ -364,6 +364,13 @@ with col_left:
 
         # --- Location & map params ---
         st.subheader("Location & map")
+        # Layer visibility checkboxes (inspired by https://github.com/originalankur/maptoposter)
+        with st.expander("Map layers", expanded=True):
+            show_water = st.checkbox("Water (lakes, rivers, bays)", value=True, key="show_water")
+            show_parks = st.checkbox("Parks & green spaces", value=True, key="show_parks")
+            show_roads = st.checkbox("Roads (street network)", value=True, key="show_roads")
+            show_gradient = st.checkbox("Gradient fades (top & bottom)", value=True, key="show_gradient")
+            show_labels = st.checkbox("Labels (city, country, coordinates)", value=True, key="show_labels")
         city_labels = [f"{c}, {co}" for c, co in CITIES]
         city_idx = st.selectbox(
             "City",
@@ -381,6 +388,46 @@ with col_left:
             key="distance",
         )
 
+        # Optional overrides: lat/long, label overrides, custom dimensions
+        with st.expander("Overrides (optional)", expanded=False):
+            use_coords_override = st.checkbox("Use custom center (lat/long) instead of city geocoding", key="use_coords")
+            if use_coords_override:
+                lat_override = st.number_input("Latitude", value=52.3676, format="%.4f", key="lat_override")
+                lon_override = st.number_input("Longitude", value=4.9041, format="%.4f", key="lon_override")
+            else:
+                lat_override, lon_override = None, None
+
+            country_label_override = st.text_input(
+                "Country label (override text on poster)",
+                value="",
+                placeholder="e.g. United States of America",
+                key="country_label",
+            )
+            country_label_override = country_label_override.strip() or None
+            display_city_override = st.text_input(
+                "Display city (i18n, e.g. 東京 for Tokyo)",
+                value="",
+                placeholder="",
+                key="display_city",
+            )
+            display_city_override = display_city_override.strip() or None
+            display_country_override = st.text_input(
+                "Display country (i18n, e.g. 日本 for Japan)",
+                value="",
+                placeholder="",
+                key="display_country",
+            )
+            display_country_override = display_country_override.strip() or None
+
+            use_custom_dims = st.checkbox("Custom width × height (override preset)", key="use_custom_dims")
+            if use_custom_dims:
+                custom_w = st.number_input("Width (inches)", min_value=3.0, max_value=20.0, value=12.0, step=0.5, key="custom_w")
+                custom_h = st.number_input("Height (inches)", min_value=3.0, max_value=20.0, value=16.0, step=0.5, key="custom_h")
+            else:
+                custom_w, custom_h = None, None
+
+        coords_override = (float(lat_override), float(lon_override)) if use_coords_override and lat_override is not None and lon_override is not None else None
+
         # --- Aspect ratio ---
         st.subheader("Aspect ratio")
         ratio_labels = [r[0] for r in ASPECT_RATIOS]
@@ -388,8 +435,12 @@ with col_left:
             "Output size",
             options=ratio_labels,
             key="aspect_ratio",
+            disabled=use_custom_dims,
         )
-        chosen_w, chosen_h = next((r[1], r[2]) for r in ASPECT_RATIOS if r[0] == ratio_choice)
+        if use_custom_dims and custom_w is not None and custom_h is not None:
+            chosen_w, chosen_h = custom_w, custom_h
+        else:
+            chosen_w, chosen_h = next((r[1], r[2]) for r in ASPECT_RATIOS if r[0] == ratio_choice)
 
         # --- Theme selection (grid with palette previews) ---
         st.subheader("Theme")
@@ -568,8 +619,11 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
         create_map_poster.THEME.clear()
         create_map_poster.THEME.update(theme)
 
-        # Live preset map: regenerate when theme colors change (one fixed map, updates in real time)
-        current_theme_key = tuple(sorted(st.session_state.theme_colors.items()))
+        # Live preset map: regenerate when theme colors or layer visibility change
+        current_theme_key = (
+            tuple(sorted(st.session_state.theme_colors.items())),
+            show_water, show_parks, show_roads, show_gradient, show_labels,
+        )
         if current_theme_key != st.session_state.get("last_live_preview_theme"):
             try:
                 coords = create_map_poster.get_coordinates(LIVE_PRESET_CITY, LIVE_PRESET_COUNTRY)
@@ -588,6 +642,11 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                         fonts=TELEGRAF_FONTS or create_map_poster.FONTS,
                         pad_inches=0,
                         letter_spacing=20,
+                        show_water=show_water,
+                        show_parks=show_parks,
+                        show_roads=show_roads,
+                        show_gradient=show_gradient,
+                        show_labels=show_labels,
                     )
                 if add_border:
                     create_map_poster.add_border_to_image(tmp_path, theme["text"], border_px=20)
@@ -604,7 +663,7 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
             preview_w = chosen_w * 0.5
             preview_h = chosen_h * 0.5
             try:
-                coords = create_map_poster.get_coordinates(city, country)
+                coords = coords_override or create_map_poster.get_coordinates(city, country)
                 with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
                     tmp_path = tmp.name
                 with st.spinner("Generating..."):
@@ -620,6 +679,14 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                         fonts=TELEGRAF_FONTS or create_map_poster.FONTS,
                         pad_inches=0,
                         letter_spacing=20,
+                        show_water=show_water,
+                        show_parks=show_parks,
+                        show_roads=show_roads,
+                        show_gradient=show_gradient,
+                        show_labels=show_labels,
+                        country_label=country_label_override,
+                        display_city=display_city_override,
+                        display_country=display_country_override,
                     )
                 if add_border:
                     create_map_poster.add_border_to_image(tmp_path, theme["text"], border_px=20)
@@ -634,7 +701,7 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
 
         if st.button("Generate full poster"):
             try:
-                coords = create_map_poster.get_coordinates(city, country)
+                coords = coords_override or create_map_poster.get_coordinates(city, country)
                 output_file = create_map_poster.generate_output_filename(
                     city, "custom", "png", subdir="streamlit"
                 )
@@ -651,6 +718,14 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                         fonts=TELEGRAF_FONTS or create_map_poster.FONTS,
                         pad_inches=0,
                         letter_spacing=20,
+                        show_water=show_water,
+                        show_parks=show_parks,
+                        show_roads=show_roads,
+                        show_gradient=show_gradient,
+                        show_labels=show_labels,
+                        country_label=country_label_override,
+                        display_city=display_city_override,
+                        display_country=display_country_override,
                     )
                 if add_border:
                     full_border_px = int(20 * (chosen_h / 6.0))  # scale to match 6in preview
@@ -663,6 +738,60 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                 st.session_state.generated_filename = os.path.basename(output_file)
             except Exception as e:
                 st.error(str(e))
+
+        if st.button("Generate all themes", help="Generate one poster per theme for current city (saves to posters/streamlit_all/)"):
+            themes_to_generate = [t for t in available if t != "From scratch"]
+            if not themes_to_generate:
+                st.warning("No themes to generate. Add themes or create from scratch first.")
+            else:
+                try:
+                    coords = coords_override or create_map_poster.get_coordinates(city, country)
+                    progress = st.progress(0.0, text=f"Generating 0/{len(themes_to_generate)}...")
+                    generated = []
+                    for i, theme_id in enumerate(themes_to_generate):
+                        progress.progress((i + 1) / len(themes_to_generate), text=f"Generating {i + 1}/{len(themes_to_generate)}: {theme_id}...")
+                        th = create_map_poster.load_theme(theme_id)
+                        create_map_poster.THEME.clear()
+                        create_map_poster.THEME.update(th)
+                        output_file = create_map_poster.generate_output_filename(
+                            city, theme_id, "png", subdir="streamlit_all"
+                        )
+                        create_map_poster.create_poster(
+                            city,
+                            country,
+                            coords,
+                            distance,
+                            output_file,
+                            "png",
+                            width=chosen_w,
+                            height=chosen_h,
+                            fonts=TELEGRAF_FONTS or create_map_poster.FONTS,
+                            pad_inches=0,
+                            letter_spacing=20,
+                            show_water=show_water,
+                            show_parks=show_parks,
+                            show_roads=show_roads,
+                            show_gradient=show_gradient,
+                            show_labels=show_labels,
+                            country_label=country_label_override,
+                            display_city=display_city_override,
+                            display_country=display_country_override,
+                        )
+                        if add_border:
+                            full_border_px = int(20 * (chosen_h / 6.0))
+                            create_map_poster.add_border_to_image(output_file, th["text"], border_px=full_border_px)
+                        generated.append(output_file)
+                    # Restore current theme for UI
+                    create_map_poster.THEME.clear()
+                    create_map_poster.THEME.update(theme)
+                    progress.empty()
+                    st.success(f"Generated {len(generated)} posters in posters/streamlit_all/")
+                    with open(generated[-1], "rb") as f:
+                        st.session_state.generated_image = f.read()
+                    st.session_state.generated_caption = f"Last of {len(generated)}: {os.path.basename(generated[-1])}"
+                    st.session_state.generated_filename = os.path.basename(generated[-1])
+                except Exception as e:
+                    st.error(str(e))
 
         st.divider()
         st.subheader("Save palette")
