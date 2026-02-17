@@ -410,6 +410,8 @@ if "generated_filename" not in st.session_state:
     st.session_state.generated_filename = "map_poster.png"
 if "live_preview_image" not in st.session_state:
     st.session_state.live_preview_image = None
+if "live_preview_caption" not in st.session_state:
+    st.session_state.live_preview_caption = None
 if "live_preview_error" not in st.session_state:
     st.session_state.live_preview_error = None
 if "live_preview_needs_update" not in st.session_state:
@@ -801,6 +803,7 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                     )
                 with open(tmp_path, "rb") as f:
                     st.session_state.live_preview_image = f.read()
+                st.session_state.live_preview_caption = f"Live: {LIVE_PRESET_CITY}, {LIVE_PRESET_COUNTRY} ({LIVE_PRESET_DIST // 1000} km)"
                 os.unlink(tmp_path)
                 st.session_state.live_preview_needs_update = False
                 st.session_state.live_preview_error = None
@@ -845,8 +848,8 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                         tmp_path, theme["text"], border_px=20
                     )
                 with open(tmp_path, "rb") as f:
-                    st.session_state.generated_image = f.read()
-                st.session_state.generated_caption = f"Preview · {city}, {country}"
+                    st.session_state.live_preview_image = f.read()
+                st.session_state.live_preview_caption = f"Preview · {city}, {country}"
                 city_slug = city.lower().replace(" ", "_")
                 st.session_state.generated_filename = (
                     f"preview_{city_slug}_{country.lower().replace(' ', '_')}.png"
@@ -1071,9 +1074,11 @@ with col_right:
 
         if live_img and gen_img:
             # A/B comparison: Live vs Generated side by side (native Streamlit)
-            st.caption(
-                f"**Preview** · Live: {LIVE_PRESET_CITY}, {LIVE_PRESET_COUNTRY} ({LIVE_PRESET_DIST // 1000} km)"
+            caption = (
+                st.session_state.get("live_preview_caption")
+                or f"Live: {LIVE_PRESET_CITY}, {LIVE_PRESET_COUNTRY} ({LIVE_PRESET_DIST // 1000} km)"
             )
+            st.caption(f"**Preview** · {caption}")
             col_a, col_b = st.columns(2)
             with col_a:
                 st.caption("**Live**")
@@ -1082,9 +1087,11 @@ with col_right:
                 st.caption("**Generated**")
                 st.image(gen_img, width="stretch")
         elif live_img:
-            st.caption(
-                f"**Preview** · Live: {LIVE_PRESET_CITY}, {LIVE_PRESET_COUNTRY} ({LIVE_PRESET_DIST // 1000} km)"
+            caption = (
+                st.session_state.get("live_preview_caption")
+                or f"Live: {LIVE_PRESET_CITY}, {LIVE_PRESET_COUNTRY} ({LIVE_PRESET_DIST // 1000} km)"
             )
+            st.caption(f"**Preview** · {caption}")
             st.image(live_img, width="stretch")
         elif gen_img:
             st.caption("**Preview** · Last generated")
