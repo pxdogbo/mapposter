@@ -760,10 +760,17 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
             key="add_border",
         )
         clear_background = st.checkbox(
-            "Clear background (transparent PNG)",
+            "Clear background (transparent)",
             value=False,
             key="clear_background",
             help="Use transparent background instead of theme color; useful for overlays",
+        )
+        output_format = st.radio(
+            "Output format",
+            options=["png", "svg"],
+            index=0,
+            horizontal=True,
+            help="SVG is vector format, great for printing and scaling",
         )
         theme = build_full_theme(st.session_state.theme_colors)
         create_map_poster.THEME.clear()
@@ -864,7 +871,7 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                     city, country
                 )
                 output_file = create_map_poster.generate_output_filename(
-                    city, "custom", "png", subdir="streamlit"
+                    city, "custom", output_format, subdir="streamlit"
                 )
                 with st.spinner("Generating..."):
                     create_map_poster.create_poster(
@@ -873,7 +880,7 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                         coords,
                         distance,
                         output_file,
-                        "png",
+                        output_format,
                         width=chosen_w,
                         height=chosen_h,
                         fonts=TELEGRAF_FONTS or create_map_poster.FONTS,
@@ -889,17 +896,20 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                         display_country=display_country_override,
                         clear_background=clear_background,
                     )
-                if add_border:
+                if add_border and output_format == "png":
                     full_border_px = int(
                         20 * (chosen_h / 6.0)
                     )  # scale to match 6in preview
                     create_map_poster.add_border_to_image(
                         output_file, theme["text"], border_px=full_border_px
                     )
+                elif add_border and output_format == "svg":
+                    st.caption("⚠️ Border not supported for SVG output")
                 with open(output_file, "rb") as f:
                     st.session_state.generated_image = f.read()
                 st.session_state.generated_caption = f"Saved: {output_file}"
                 st.session_state.generated_filename = os.path.basename(output_file)
+                st.session_state.generated_format = output_format
             except Exception as e:
                 st.error(str(e))
 
@@ -1110,10 +1120,12 @@ with col_right:
             st.info("Click 'Update Preview' to generate preview")
 
         if gen_img:
+            fmt = st.session_state.get("generated_format", "png")
+            mime = "image/png" if fmt == "png" else "image/svg+xml"
             st.download_button(
-                "Download PNG",
+                f"Download {fmt.upper()}",
                 data=gen_img,
                 file_name=st.session_state.generated_filename,
-                mime="image/png",
-                key="download_png",
+                mime=mime,
+                key="download_poster",
             )
