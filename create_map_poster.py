@@ -595,6 +595,7 @@ def create_poster(
     show_gradient=True,
     show_labels=True,
     clear_background=False,
+    map_only=False,
 ):
     """
     Generate a complete map poster with roads, water, parks, and typography.
@@ -620,10 +621,16 @@ def create_poster(
         show_gradient: Whether to display top/bottom gradient fades (default: True)
         show_labels: Whether to display city, country, and coordinates (default: True)
         clear_background: Whether to use a transparent background instead of theme bg (default: False)
+        map_only: If True, hide all text (city, country, coordinates, map labels) - show only the map (default: False)
 
     Raises:
         RuntimeError: If street network data cannot be retrieved
     """
+    # map_only mode hides all text
+    if map_only:
+        show_labels = False
+        show_gradient = False
+
     # Handle display names for i18n support
     # Priority: display_city/display_country > name_label/country_label > city/country
     display_city = display_city or name_label or city

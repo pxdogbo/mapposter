@@ -211,6 +211,7 @@ def theme_palette_html(colors: dict) -> str:
 
 
 # Aspect ratio presets: (label, width_inches, height_inches)
+# iPhone dimensions based on native resolutions at ~460 PPI for Pro models
 ASPECT_RATIOS = [
     ("3:4 (portrait)", 9, 12),
     ("1:1 (square)", 12, 12),
@@ -218,6 +219,9 @@ ASPECT_RATIOS = [
     ("16:9 (wide)", 12, 6.75),
     ("9:16 (story)", 6.75, 12),
     ("12:16 (poster)", 12, 16),
+    ("iPhone 14/15 Pro (9:19.5)", 3.9, 8.5),
+    ("iPhone 14/15 Pro Max (9:19.5)", 4.3, 9.3),
+    ("iPhone SE/XR (9:16)", 3.58, 6.4),
 ]
 
 # Fixed preset for live-updating preview (small so it regenerates quickly)
@@ -416,6 +420,8 @@ if "live_preview_error" not in st.session_state:
     st.session_state.live_preview_error = None
 if "live_preview_needs_update" not in st.session_state:
     st.session_state.live_preview_needs_update = True
+if "map_only_mode" not in st.session_state:
+    st.session_state.map_only_mode = False
 
 # Two-column layout: controls left (scrollable), preview right (fixed)
 col_left, col_right = st.columns([1, 1.2], gap="large")
@@ -803,6 +809,7 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                         show_gradient=show_gradient,
                         show_labels=show_labels,
                         clear_background=clear_background,
+                        map_only=st.session_state.map_only_mode,
                     )
                 if add_border:
                     create_map_poster.add_border_to_image(
@@ -895,6 +902,7 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                         display_city=display_city_override,
                         display_country=display_country_override,
                         clear_background=clear_background,
+                        map_only=st.session_state.map_only_mode,
                     )
                 if add_border and output_format == "png":
                     full_border_px = int(
@@ -963,6 +971,7 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
                             display_city=display_city_override,
                             display_country=display_country_override,
                             clear_background=clear_background,
+                            map_only=st.session_state.map_only_mode,
                         )
                         if add_border:
                             full_border_px = int(20 * (chosen_h / 6.0))
@@ -1078,6 +1087,12 @@ with col_right:
     with st.container(
         height=960
     ):  # Taller so poster fits above the fold without scrolling
+        # Map only toggle
+        st.session_state.map_only_mode = st.checkbox(
+            "Map only (hide text)",
+            value=st.session_state.map_only_mode,
+            key="map_only_toggle",
+        )
         # Compact header: single line to leave more room for poster
         live_img = st.session_state.live_preview_image
         gen_img = st.session_state.generated_image
