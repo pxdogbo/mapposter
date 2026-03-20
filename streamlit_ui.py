@@ -404,6 +404,50 @@ def _save_hidden_themes(hidden: list[str]) -> None:
         json.dump(hidden, f, indent=2)
 
 
+def _save_hidden_themes_to_github(hidden: list[str]) -> tuple[bool, str]:
+    """
+    Persist hidden_themes.json to GitHub repo via API. Returns (success, message).
+    """
+    try:
+        token = st.secrets.get("GITHUB_TOKEN")
+    except Exception:
+        token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        return False, "GITHUB_TOKEN not configured"
+
+    repo = "pxdogbo/mapposter"
+    try:
+        repo = st.secrets.get("GITHUB_REPO", repo)
+    except Exception:
+        repo = os.environ.get("GITHUB_REPO", repo)
+
+    content = json.dumps(hidden, indent=2)
+    encoded = base64.b64encode(content.encode("utf-8")).decode("utf-8")
+    path = "themes/hidden_themes.json"
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    url = f"https://api.github.com/repos/{repo}/contents/{path}"
+
+    r = requests.get(url, headers=headers, timeout=10)
+    sha = r.json().get("sha") if r.status_code == 200 else None
+
+    payload = {
+        "message": "Update hidden_themes.json",
+        "content": encoded,
+    }
+    if sha:
+        payload["sha"] = sha
+
+    resp = requests.put(url, headers=headers, json=payload, timeout=15)
+    if resp.status_code in (200, 201):
+        return True, "Saved hidden_themes.json to GitHub"
+    return False, resp.json().get("message", resp.text)
+
+
 def delete_theme_from_file(theme_id: str) -> tuple[bool, str]:
     """
     Delete theme: remove from GitHub, add to hidden list, and remove local file.
@@ -423,6 +467,7 @@ def delete_theme_from_file(theme_id: str) -> tuple[bool, str]:
     if theme_id not in hidden:
         hidden.append(theme_id)
         _save_hidden_themes(hidden)
+        _save_hidden_themes_to_github(hidden)
 
     # Remove the theme file from disk
     path = THEMES_DIR / f"{theme_id}.json"
