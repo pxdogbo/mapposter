@@ -355,7 +355,7 @@ def get_edge_widths_by_type(g):
 def get_coordinates(city, country):
     """
     Fetches coordinates for a given city and country using geopy.
-    Includes rate limiting to be respectful to the geocoding service.
+    Includes rate limiting and retry logic for Nominatim's 429 rate limit responses.
     """
     coords = f"coords_{city.lower()}_{country.lower()}"
     cached = cache_get(coords)
@@ -364,33 +364,39 @@ def get_coordinates(city, country):
         return cached
 
     print("Looking up coordinates...")
-    geolocator = Nominatim(user_agent="city_map_poster", timeout=10)
+    geolocator = Nominatim(
+        user_agent="mapposter-app/1.0 (https://github.com/pxdogbo/mapposter)",
+        timeout=10,
+    )
 
-    # Add a small delay to respect Nominatim's usage policy
-    time.sleep(1)
+    max_retries = 5
+    base_delay = 2
 
-    try:
-        location = geolocator.geocode(f"{city}, {country}")
-    except Exception as e:
-        raise ValueError(f"Geocoding failed for {city}, {country}: {e}") from e
+    for attempt in range(max_retries):
+        time.sleep(base_delay * (attempt + 1))
 
-    # If geocode returned a coroutine in some environments, run it to get the result.
-    if asyncio.iscoroutine(location):
         try:
-            location = asyncio.run(location)
-        except RuntimeError as exc:
-            # If an event loop is already running, try using it to complete the coroutine.
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # Running event loop in the same thread; raise a clear error.
-                raise RuntimeError(
-                    "Geocoder returned a coroutine while an event loop is already running. "
-                    "Run this script in a synchronous environment."
-                ) from exc
-            location = loop.run_until_complete(location)
+            location = geolocator.geocode(f"{city}, {country}")
+        except Exception as e:
+            error_str = str(e).lower()
+            if "429" in error_str or "rate" in error_str or "too many" in error_str:
+                if attempt < max_retries - 1:
+                    wait_time = base_delay * (2**attempt)
+                    print(
+                        f"  Rate limited (429), retrying in {wait_time}s... (attempt {attempt + 1}/{max_retries})"
+                    )
+                    continue
+            raise ValueError(f"Geocoding failed for {city}, {country}: {e}") from e
 
-    if location:
-        # Use getattr to safely access address (helps static analyzers)
+        if location is None:
+            if attempt < max_retries - 1:
+                wait_time = base_delay * (2**attempt)
+                print(
+                    f"  Received empty response, retrying in {wait_time}s... (attempt {attempt + 1}/{max_retries})"
+                )
+                continue
+            raise ValueError(f"Could not find coordinates for {city}, {country}")
+
         addr = getattr(location, "address", None)
         if addr:
             print(f"✓ Found: {addr}")

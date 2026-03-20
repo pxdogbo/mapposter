@@ -227,6 +227,10 @@ ASPECT_RATIOS = [
 # Fixed preset for live-updating preview (small so it regenerates quickly)
 LIVE_PRESET_CITY = "Amsterdam"
 LIVE_PRESET_COUNTRY = "Netherlands"
+LIVE_PRESET_COORDS = (
+    52.3730796,
+    4.8924534,
+)  # Hardcoded to avoid Nominatim rate limiting
 LIVE_PRESET_DIST = 5000
 LIVE_PRESET_W, LIVE_PRESET_H = 5, 6
 
@@ -785,8 +789,8 @@ Describe the mood or style you want (e.g. dark indigo, warm earth, high contrast
         # Live preset map: regenerate when button is pressed
         if st.session_state.get("live_preview_needs_update", False):
             try:
-                coords = create_map_poster.get_coordinates(
-                    LIVE_PRESET_CITY, LIVE_PRESET_COUNTRY
+                coords = (
+                    LIVE_PRESET_COORDS  # Hardcoded to avoid Nominatim rate limiting
                 )
                 with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
                     tmp_path = tmp.name
